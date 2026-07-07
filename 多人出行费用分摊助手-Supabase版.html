@@ -247,6 +247,7 @@
 <div class="status-bar">
   <span class="status-dot" id="statusDot"></span>
   <span class="status-text" id="statusText">未连接</span>
+  <span style="font-size:10px;color:var(--ink-soft);margin-left:2px;font-family:ui-monospace;cursor:pointer;text-decoration:underline" id="versionTag" onclick="showVersionLog()"></span>
   <span class="trip-id" id="tripIdDisplay" style="display:none"></span>
   <div class="status-actions">
     <button class="whoami-btn" id="whoamiBtn" onclick="openWhoamiModal()">👤 未选择</button>
@@ -270,7 +271,7 @@
       <div class="form-field"><label>付款人</label><select id="f_payer"></select></div>
       <div class="form-field"><label>金额（¥）</label><input type="number" id="f_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
       <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="比如：机场打车、两晚酒店"></div>
-      <div class="form-field full"><label>📍 定位（可选）</label><div style="display:flex;align-items:center;gap:8px"><button type="button" id="f_locBtn" onclick="getLocation('f_location','f_locDisplay','f_locBtn')" style="background:#fff;border:1px solid var(--brand);color:var(--brand);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0">📍 获取定位</button><input type="hidden" id="f_location"><span id="f_locDisplay" style="font-size:13px;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div></div><div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
+      <div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
       <div class="form-field full"><div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none"><span class="arrow">▸</span> 高级：自定义分摊份数</div><div class="weights-panel" id="weightsPanel"></div></div>
       <div class="form-field full"><label>备注</label><input type="text" id="f_note" placeholder="比如：2间×2晚"></div>
       <div class="form-field full"><label>付款凭证（拍照，最多5张）</label><div class="images-preview" id="f_images"></div><label class="add-img-btn" for="imgInput">📷 添加图片</label><input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)"></div>
@@ -286,7 +287,7 @@
   <div class="card">
     <h2><span class="num">2</span> 已录支出 <span class="badge" id="listBadge">0 笔</span></h2>
     <div class="list-header" style="position:relative"><span>实时同步中 · 多人可同时编辑</span><span class="total clickable" id="listTotal" onclick="openCategoryPopup(event)" title="点击查看分类统计">合计 ¥0.00</span></div>
-    <table class="desktop"><thead><tr><th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明 / 定位</th><th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th><th style="width:120px">参与人</th><th style="width:86px">操作</th></tr></thead><tbody id="expenseBody"></tbody></table>
+    <table class="desktop"><thead><tr><th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明</th><th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th><th style="width:120px">参与人</th><th style="width:86px">操作</th></tr></thead><tbody id="expenseBody"></tbody></table>
     <div class="expense-cards-mobile" id="expenseCards"></div>
   </div>
 
@@ -321,7 +322,7 @@
     <div class="form-field"><label>付款人</label><select id="e_payer"></select></div>
     <div class="form-field"><label>金额（¥）</label><input type="number" id="e_amount" step="0.01" min="0" inputmode="decimal"></div>
     <div class="form-field full"><label>说明</label><input type="text" id="e_desc"></div>
-    <div class="form-field full"><label>📍 定位（可选）</label><div style="display:flex;align-items:center;gap:8px"><button type="button" id="e_locBtn" onclick="getLocation('e_location','e_locDisplay','e_locBtn')" style="background:#fff;border:1px solid var(--brand);color:var(--brand);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0">📍 获取定位</button><input type="hidden" id="e_location"><span id="e_locDisplay" style="font-size:13px;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div></div><div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
+    <div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
     <div class="form-field full"><div class="weights-toggle" id="e_weightsToggle" onclick="toggleEditWeights()"><span class="arrow">▸</span> 自定义分摊份数</div><div class="weights-panel" id="e_weightsPanel"></div></div>
     <div class="form-field full"><label>备注</label><input type="text" id="e_note"></div>
     <div class="form-field full"><label>付款凭证</label><div class="images-preview" id="e_images"></div><label class="add-img-btn" for="e_imgInput">📷 添加图片</label><input type="file" id="e_imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
@@ -342,8 +343,20 @@ const HARDCODED = {
   key: 'sb_publishable_uaQM9RJ06PXKC8v4BlqAhA_TK__m3pK',
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
-const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=4*60*60*1000;
-let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false;
+const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=30*24*60*60*1000;
+const APP_VERSION='V0.9';
+const VERSION_LOG=[
+  {ver:'V0.1',date:'2026-07-07',items:'初始版本：多人录入、实时同步、Supabase后端、权重分摊、拍照凭证、结算方案'},
+  {ver:'V0.2',date:'2026-07-07',items:'修复金额numeric overflow；SDK CDN fallback；隐藏密码提示；分类分析改为合计金额浮窗；个人汇总移入成员弹窗；成员删除需管理员密码'},
+  {ver:'V0.3',date:'2026-07-07',items:'结束出行/清空数据移入设置页；个人汇总直接显示在成员后；修复const→let导致按钮无反应；已实付/应分摊表述优化'},
+  {ver:'V0.4',date:'2026-07-07',items:'已实付/应分摊点击弹出明细小窗；数据一致性阈值提至0.10；录入/编辑/删除需先选我是谁；表单焦点自动校验身份'},
+  {ver:'V0.5',date:'2026-07-07',items:'新增定位功能（GPS+逆地理编码）；删除顶部副标题和底部footer'},
+  {ver:'V0.6',date:'2026-07-07',items:'定位改为按钮获取而非输入框；我是谁4小时过期；我是谁弹窗新增"没有名字？点击新增"入口'},
+  {ver:'V0.7',date:'2026-07-07',items:'全面校验分摊计算和逻辑流程（46项全通过）；删除定位功能；新增成员后自动设为我是谁'},
+  {ver:'V0.8',date:'2026-07-07',items:'身份缓存改为30天；自定义分摊份数改为整数；版本号V0.8显示在状态栏；点版本号查看更新明细'},
+  {ver:'V0.9',date:'2026-07-08',items:'实现版本更新记录弹窗功能；点击版本号可查看完整更新历史'},
+];
+let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false,_pendingWhoami=false;
 let state={members:[],expenses:[]};
 let editingId=null,isFetching=false,_tempImages=[],_editImages=[];
 const DEFAULT_CATS=['餐饮','交通','住宿','门票','购物','其他'];
@@ -354,34 +367,7 @@ function r2(x){return Math.round(x*100)/100}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
-function getLocation(hiddenId,displayId,btnId){
-  const btn=document.getElementById(btnId);
-  btn.disabled=true;btn.textContent='定位中...';
-  if(!navigator.geolocation){btn.textContent='不支持定位';btn.disabled=false;showToast('浏览器不支持定位');return}
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      const coords=`${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`;
-      document.getElementById(hiddenId).value=coords;
-      // Reverse geocode: try to get a readable name
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=16`)
-        .then(r=>r.json()).then(data=>{
-          const name=data.display_name?data.display_name.split(',').slice(0,3).join('·'):coords;
-          document.getElementById(hiddenId).value=name;
-          document.getElementById(displayId).textContent=name;
-        }).catch(()=>{
-          document.getElementById(displayId).textContent=coords;
-        });
-      btn.textContent='已定位 ✓';btn.disabled=false;
-      setTimeout(()=>{if(document.getElementById(displayId).textContent){btn.textContent='📍 重新定位'}},3000)
-    },
-    err=>{
-      btn.textContent='📍 获取定位';btn.disabled=false;
-      if(err.code===1)showToast('定位权限被拒绝，请在浏览器设置中允许');
-      else showToast('定位失败，请检查网络');
-    },
-    {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
-  )
-}
+
 function getWhoami(){const ts=parseInt(localStorage.getItem(LS_WHOAMI_TS)||'0');if(ts&&Date.now()-ts>MAX_WHOAMI_AGE){clearWhoami();return''}return localStorage.getItem(LS_WHOAMI)||''}
 function clearWhoami(){localStorage.removeItem(LS_WHOAMI);localStorage.removeItem(LS_WHOAMI_TS);renderWhoamiBtn()}
 function setWhoami(name){localStorage.setItem(LS_WHOAMI,name);localStorage.setItem(LS_WHOAMI_TS,Date.now());renderWhoamiBtn();resetForm()}
@@ -428,7 +414,7 @@ function bootstrapLocal(){loadLocal();resetForm();renderAll()}
 // ============================================================
 // REMOTE
 // ============================================================
-async function loadRemote(){isFetching=true;const{data:memData,error:memErr}=await sb.from('members').select('*').eq('trip_id',TRIP_ID);if(memErr)throw new Error('members: '+memErr.message);const{data:expData,error:expErr}=await sb.from('expenses').select('*').eq('trip_id',TRIP_ID).order('date',{ascending:true});if(expErr)throw new Error('expenses: '+expErr.message);state.members=(memData||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));state.expenses=(expData||[]).map(r=>({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount)||0,participants:r.participants||[],weights:r.weights||{},images:r.images||[],created_by:r.created_by||r.payer||'',note:r.note||'',location:r.location||''}));isFetching=false}
+async function loadRemote(){isFetching=true;const{data:memData,error:memErr}=await sb.from('members').select('*').eq('trip_id',TRIP_ID);if(memErr)throw new Error('members: '+memErr.message);const{data:expData,error:expErr}=await sb.from('expenses').select('*').eq('trip_id',TRIP_ID).order('date',{ascending:true});if(expErr)throw new Error('expenses: '+expErr.message);state.members=(memData||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));state.expenses=(expData||[]).map(r=>({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount)||0,participants:r.participants||[],weights:r.weights||{},images:r.images||[],created_by:r.created_by||r.payer||'',note:r.note||''}));isFetching=false}
 function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'members',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe();sb.channel('exp-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'expenses',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe()}
 
 // ============================================================
@@ -436,8 +422,8 @@ function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{eve
 // ============================================================
 async function addMemberRemote(name){const{data,error}=await sb.from('members').insert({trip_id:TRIP_ID,name}).select().single();if(error)throw error;return data}
 async function delMemberRemote(id){const m=state.members.find(x=>x.id===id);const n=m?m.name:'';if(n){await sb.from('expenses').delete().eq('trip_id',TRIP_ID).eq('payer',n);await sb.from('expenses').delete().eq('trip_id',TRIP_ID).contains('participants',[n])}await sb.from('members').delete().eq('id',id)}
-async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||'',location:e.location||''};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
-async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||'',location:e.location||''};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
+async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
+async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
 async function delExpenseRemote(id){await sb.from('expenses').delete().eq('id',id)}
 
 // ============================================================
@@ -485,7 +471,7 @@ function renderMemberModal(){
 }
 function openMembersModal(){renderMemberModal();document.getElementById('membersModal').classList.add('open')}
 function closeMembersModal(){document.getElementById('membersModal').classList.remove('open')}
-async function addMember(){const inp=document.getElementById('newMemberInput');if(!inp)return;const name=inp.value.trim();if(!name)return;if(state.members.some(m=>m.name===name)){showToast('已有同名成员');return}if(mode==='remote'&&sb){try{const data=await addMemberRemote(name);state.members.push({id:data.id,name:data.name})}catch(e){showToast('添加失败:'+e.message);return}}else{state.members.push({id:uid(),name});saveLocal()}inp.value='';renderMemberModal();renderAll();setTimeout(()=>inp.focus(),30)}
+async function addMember(){const inp=document.getElementById('newMemberInput');if(!inp)return;const name=inp.value.trim();if(!name)return;if(state.members.some(m=>m.name===name)){showToast('已有同名成员');return}if(mode==='remote'&&sb){try{const data=await addMemberRemote(name);state.members.push({id:data.id,name:data.name})}catch(e){showToast('添加失败:'+e.message);return}}else{state.members.push({id:uid(),name});saveLocal()}inp.value='';renderMemberModal();renderAll();if(_pendingWhoami){_pendingWhoami=false;setWhoami(name);closeMembersModal()}setTimeout(()=>inp.focus(),30)}
 async function removeMember(id){const m=state.members.find(x=>x.id===id);if(!m)return;const used=state.expenses.some(e=>e.payer===m.name||(e.participants||[]).includes(m.name));if(!confirm(used?`成员「${m.name}」已在支出中出现，删除后相关支出也会删除。继续？`:`删除「${m.name}」？`))return;if(mode==='remote'&&sb){try{await delMemberRemote(id)}catch(e){showToast('删除失败:'+e.message);return};state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name))}else{state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name));saveLocal()}if(getWhoami()===m.name){clearWhoami()}renderAll();renderMemberModal()}
 
 function renderCategoryModal(){const cats=getCategories();const list=document.getElementById('catList');list.innerHTML='';cats.forEach(c=>{const div=document.createElement('div');div.className='cat-list-item';div.innerHTML=`<span class="name">${esc(c)}</span><button onclick="removeCategory('${esc(c)}')">删除</button>`;list.appendChild(div)})}
@@ -495,7 +481,8 @@ function addCategory(){const inp=document.getElementById('newCatInput');if(!inp)
 function removeCategory(name){const cats=getCategories();if(cats.length<=1){showToast('至少保留一个类目');return}const idx=cats.indexOf(name);if(idx>=0)cats.splice(idx,1);setCategories(cats);renderCategoryModal();renderForm()}
 
 function renderWhoamiBtn(){const who=getWhoami();const btn=document.getElementById('whoamiBtn');if(who){btn.textContent='👤 我：'+who;btn.className='whoami-btn set'}else{btn.textContent='👤 未选择';btn.className='whoami-btn'}}
-function renderWhoamiModal(){const list=document.getElementById('whoamiList'),who=getWhoami();list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:10px 0;font-size:13px">请先添加成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.style.cssText='padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center';if(m.name===who)div.style.background='var(--good-soft)';div.innerHTML=`<span style="font-weight:600;font-size:14px">${esc(m.name)}</span>${m.name===who?'<span style="font-size:11px;color:var(--good)">✓ 当前</span>':''}`;div.onclick=()=>{setWhoami(m.name);closeWhoamiModal();resetForm()};list.appendChild(div)})}if(who){const clear=document.createElement('div');clear.style.cssText='padding:6px 10px;margin-top:6px;cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft)';clear.textContent='清除选择';clear.onclick=()=>{clearWhoami();closeWhoamiModal();resetForm()};list.appendChild(clear)}}
+function renderWhoamiModal(){const list=document.getElementById('whoamiList'),who=getWhoami();list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:10px 0;font-size:13px">请先添加成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.style.cssText='padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center';if(m.name===who)div.style.background='var(--good-soft)';div.innerHTML=`<span style="font-weight:600;font-size:14px">${esc(m.name)}</span>${m.name===who?'<span style="font-size:11px;color:var(--good)">✓ 当前</span>':''}`;div.onclick=()=>{setWhoami(m.name);closeWhoamiModal();resetForm()};list.appendChild(div)})}// Add "new member" prompt
+const addMe=document.createElement('div');addMe.style.cssText='padding:8px 10px;margin-top:6px;border-radius:6px;cursor:pointer;text-align:center;font-size:13px;color:var(--brand);border:1px dashed var(--brand);background:var(--brand-soft)';addMe.textContent='没有名字？点击新增';addMe.onclick=()=>{closeWhoamiModal();_pendingWhoami=true;openMembersModal();setTimeout(()=>{const inp=document.getElementById('newMemberInput');if(inp)inp.focus();if(inp)inp.placeholder='输入你的名字后点击添加'},300)};list.appendChild(addMe);if(who){const clear=document.createElement('div');clear.style.cssText='padding:6px 10px;margin-top:6px;cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft)';clear.textContent='清除选择';clear.onclick=()=>{clearWhoami();closeWhoamiModal();resetForm()};list.appendChild(clear)}}
 function openWhoamiModal(){renderWhoamiModal();document.getElementById('whoamiModal').classList.add('open')}
 function closeWhoamiModal(){document.getElementById('whoamiModal').classList.remove('open')}
 
@@ -548,7 +535,7 @@ function updateFormSummary(){const amt=parseFloat(document.getElementById('f_amo
 // Weights
 // ============================================================
 function toggleWeights(){const panel=document.getElementById('weightsPanel'),toggle=document.getElementById('weightsToggle');panel.classList.toggle('show');toggle.classList.toggle('open');if(panel.classList.contains('show'))renderWeightsPanel()}
-function renderWeightsPanel(){const panel=document.getElementById('weightsPanel'),parts=getSelParts(),w=getCurrentWeights();panel.innerHTML='';if(parts.length===0){panel.innerHTML='<div style="font-size:12px;color:var(--ink-soft)">先勾选参与人</div>';return}parts.forEach(name=>{const row=document.createElement('div');row.className='weight-row';row.innerHTML=`<span class="w-name">${esc(name)}</span>× <input type="number" value="${w[name]||1}" min="0.5" step="0.5" data-weight-name="${esc(name)}" oninput="onWeightChange()"> <span class="w-unit">份</span>`;panel.appendChild(row)})}
+function renderWeightsPanel(){const panel=document.getElementById('weightsPanel'),parts=getSelParts(),w=getCurrentWeights();panel.innerHTML='';if(parts.length===0){panel.innerHTML='<div style="font-size:12px;color:var(--ink-soft)">先勾选参与人</div>';return}parts.forEach(name=>{const row=document.createElement('div');row.className='weight-row';row.innerHTML=`<span class="w-name">${esc(name)}</span>× <input type="number" value="${w[name]||1}" min="1" step="1" data-weight-name="${esc(name)}" oninput="onWeightChange()"> <span class="w-unit">份</span>`;panel.appendChild(row)})}
 function getCurrentWeights(){const w={};document.querySelectorAll('[data-weight-name]').forEach(el=>{const n=el.dataset.weightName,v=parseFloat(el.value)||1;if(v!==1)w[n]=v});return w}
 function onWeightChange(){updateFormSummary();renderWeightsPanel();document.getElementById('weightsPanel').classList.add('show');document.getElementById('weightsToggle').classList.add('open')}
 
@@ -579,9 +566,6 @@ function openEditModal(id){document.getElementById('e_weightsPanel').classList.r
   document.getElementById('e_amount').value=e.amount;
   document.getElementById('e_desc').value=e.desc;
   document.getElementById('e_note').value=e.note||'';
-  document.getElementById('e_location').value=e.location||'';
-  document.getElementById('e_locDisplay').textContent=e.location||'';
-  document.getElementById('e_locBtn').textContent=e.location?'📍 重新定位':'📍 获取定位';
   // Participants
   const p=document.getElementById('e_participants');
   p.innerHTML=state.members.map(m=>{const checked=(e.participants||[]).includes(m.name)?'checked':'';return`<label class="check-pill ${checked}" data-name-ep="${esc(m.name)}" onclick="toggleEditPill(event)">${esc(m.name)}</label>`}).join("");
@@ -595,7 +579,7 @@ function openEditModal(id){document.getElementById('e_weightsPanel').classList.r
 function closeEditModal(){document.getElementById('editModal').classList.remove('open');_editImages=[]}
 function getEditSelParts(){return Array.from(document.querySelectorAll('#editModal .check-pill.checked')).map(el=>el.dataset.nameEp).filter(Boolean)}
 function toggleEditPill(e){let el=e.target;while(el&&!el.classList.contains('check-pill'))el=el.parentElement;if(!el)return;el.classList.toggle('checked');renderEditWeightsPanel()}
-function renderEditWeightsPanel(wobj){const panel=document.getElementById('e_weightsPanel'),parts=getEditSelParts(),existing={};if(!wobj){document.querySelectorAll('#e_weightsPanel [data-ew-name]').forEach(el=>{existing[el.dataset.ewName]=parseFloat(el.value)||1})}panel.innerHTML='';if(parts.length===0)return;parts.forEach(name=>{const v=wobj? (wobj[name]||1) : (existing[name]||1);const row=document.createElement('div');row.className='weight-row';row.innerHTML=`<span class="w-name">${esc(name)}</span>× <input type="number" value="${v}" min="0.5" step="0.5" data-ew-name="${esc(name)}"> <span class="w-unit">份</span>`;panel.appendChild(row)})}
+function renderEditWeightsPanel(wobj){const panel=document.getElementById('e_weightsPanel'),parts=getEditSelParts(),existing={};if(!wobj){document.querySelectorAll('#e_weightsPanel [data-ew-name]').forEach(el=>{existing[el.dataset.ewName]=parseFloat(el.value)||1})}panel.innerHTML='';if(parts.length===0)return;parts.forEach(name=>{const v=wobj? (wobj[name]||1) : (existing[name]||1);const row=document.createElement('div');row.className='weight-row';row.innerHTML=`<span class="w-name">${esc(name)}</span>× <input type="number" value="${v}" min="1" step="1" data-ew-name="${esc(name)}"> <span class="w-unit">份</span>`;panel.appendChild(row)})}
 function toggleEditWeights(){const panel=document.getElementById('e_weightsPanel'),toggle=document.getElementById('e_weightsToggle');panel.classList.toggle('show');toggle.classList.toggle('open');if(panel.classList.contains('show'))renderEditWeightsPanel()}
 function renderEditImagePreviews(){const container=document.getElementById('e_images');container.innerHTML=_editImages.map((uri,i)=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"><span class="del-img" onclick="event.stopPropagation();removeEditImage(${i})">×</span></div>`).join("")}
 function onEditImagesSelected(input){const files=input.files;if(!files||files.length===0)return;if(_editImages.length+files.length>5){showToast('最多5张');input.value='';return}let i=0;const reader=new FileReader();reader.onload=function(e){_editImages.push(e.target.result);i++;if(i<files.length){readNext()}else{renderEditImagePreviews();input.value=''}};function readNext(){reader.readAsDataURL(files[i])}readNext()}
@@ -609,7 +593,7 @@ async function saveEditExpense(){
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
-  const eLoc=document.getElementById('e_location').value;const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note,location:eLoc};
+  const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note};
   if(mode==='remote'&&sb){try{await updateExpenseRemote(id,payload);const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload)}catch(err){var em2=err.message||'';if(em2.indexOf('numeric')>-1||em2.indexOf('overflow')>-1)em2='金额超限，请检查数字';showToast('保存失败:'+em2);return}}else{const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload);saveLocal()}
   closeEditModal();_editImages=[];renderAll();showToast('已保存')
 }
@@ -625,12 +609,12 @@ async function submitExpense(){
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
   const cleanWeights={};for(const n of parts){const v=weights[n]||1;if(v!==1)cleanWeights[n]=v}
-  const loc=document.getElementById('f_location').value;const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note,location:loc};
+  const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note};
   if(mode==='remote'&&sb){try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}catch(e){var em=e.message||'';if(em.indexOf('numeric')>-1||em.indexOf('overflow')>-1)em='金额超限，请检查数字';showToast('保存失败:'+em);return}}else{state.expenses.push({id:uid(),...payload});saveLocal()}
   _tempImages=[];editingId=null;resetForm();renderAll();
 }
 function resetForm(){
-  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_location').value='';document.getElementById('f_locDisplay').textContent='';document.getElementById('f_locBtn').textContent='📍 获取定位';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';
+  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';
   const catSel=document.getElementById('f_cat');const cats=getCategories();catSel.value=cats[0];
   const who=getWhoami(),sel=document.getElementById('f_payer');if(who&&state.members.some(m=>m.name===who))sel.value=who;else if(state.members.length>0)sel.value=state.members[0].name;
   document.querySelectorAll('.check-pill').forEach(el=>el.classList.remove('checked'));
@@ -668,14 +652,14 @@ function renderExpenseList(){
       const hasNonOne=Object.keys(w).some(k=>(w[k]||1)!==1);
       const partsText=partsArr.length===0?'全员':(hasNonOne?partsArr.map(n=>esc(n)+(w[n]&&w[n]!==1?`(×${w[n]})`:'')).join('、'):partsArr.map(n=>esc(n)).join('、'));
       const imgTag=(e.images||[]).length>0?`<span class="img-indicator" onclick="openLightbox('${esc(e.images[0])}')">📷${e.images.length}</span>`:'';
-      const locTag=e.location?`<span style="font-size:10px;color:var(--brand);background:var(--brand-soft);padding:1px 5px;border-radius:3px;margin-left:4px">📍${esc(e.location)}</span>`:'';const by=e.created_by?`<div class="byline">录入：${esc(e.created_by)}</div>`:'';
-      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${locTag}${by}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
+      const by=e.created_by?`<div class="byline">录入：${esc(e.created_by)}</div>`:'';
+      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${by}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
       body.appendChild(tr);
       // Mobile card
       const card=document.createElement('div');card.className='exp-card';
       const pNames=partsArr.map(n=>esc(n)).join('、');
-      const locTagM=e.location?`<span style="font-size:10px;color:var(--brand);background:var(--brand-soft);padding:1px 5px;border-radius:3px;margin-left:4px">📍${esc(e.location)}</span>`:'';const by2=e.created_by?` · 录：${esc(e.created_by)}`:'';
-      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}${locTagM}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}${by2}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
+      const by2=e.created_by?` · 录：${esc(e.created_by)}`:'';
+      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}${by2}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
     });
   }
   document.getElementById('listBadge').textContent=`${state.expenses.length} 笔`;
@@ -715,13 +699,13 @@ function openDetailPopup(e,type,name){
   document.querySelectorAll('.detail-popup').forEach(p=>{if(p!==popup)p.style.display='none'});
   const items=[];
   if(type==='paid'){
-    state.expenses.forEach(ex=>{if(ex.payer===name)items.push({desc:ex.desc,date:ex.date,amt:ex.amount,location:ex.location})});
+    state.expenses.forEach(ex=>{if(ex.payer===name)items.push({desc:ex.desc,date:ex.date,amt:ex.amount})});
   }else{
     state.expenses.forEach(ex=>{
       if(!ex.participants||!ex.participants.includes(name))return;
       const totalW=(ex.participants||[]).reduce((s,n)=>s+(ex.weights[n]||1),0);
       const share=r2(totalW>0?ex.amount*(ex.weights[name]||1)/totalW:0);
-      items.push({desc:ex.desc,date:ex.date,amt:share,location:ex.location})
+      items.push({desc:ex.desc,date:ex.date,amt:share})
     });
   }
   let html='<div class="detail-popup-head"><span>'+(type==='paid'?'已实付明细':'应分摊明细')+'</span><button class="detail-popup-close" onclick="closeDetailPopup(\''+name+'\')">×</button></div>';
@@ -729,7 +713,7 @@ function openDetailPopup(e,type,name){
     html+='<div class="de-empty">暂无数据</div>';
   }else{
     items.sort((a,b)=>b.amt-a.amt);
-    items.forEach(it=>{const locStr=it.location?' 📍'+esc(it.location):'';html+='<div class="de-row"><span class="de-desc">'+(it.date||'')+' '+esc(it.desc)+locStr+'</span><span class="de-amt">'+fmt(it.amt)+'</span></div>'});
+    items.forEach(it=>{html+='<div class="de-row"><span class="de-desc">'+(it.date||'')+' '+esc(it.desc)+'</span><span class="de-amt">'+fmt(it.amt)+'</span></div>'});
   }
   popup.innerHTML=html;
   popup.style.display='block';
@@ -749,6 +733,15 @@ function showConsistencyDetail(e){
   lines.push('','总净额合计：'+fmt(sum)+'（应为 ¥0.00，差值来自权重舍入或数据不完整）');
   const msg=lines.join('\n');
   alert('数据一致性详情\n\n'+msg);
+}
+function showVersionLog(){
+  let lines=['版本更新记录',''];
+  VERSION_LOG.forEach(v=>{
+    lines.push(v.ver+'（'+v.date+'）');
+    v.items.split('；').forEach(item=>lines.push('  · '+item));
+    lines.push('');
+  });
+  alert(lines.join('\n'));
 }
 
 // ============================================================
@@ -783,6 +776,7 @@ function renderAll(){renderForm();renderExpenseList();renderSummary()}
 // INIT
 // ============================================================
 document.getElementById('f_amount').addEventListener('input',updateFormSummary);
+document.getElementById('versionTag').textContent=APP_VERSION;
 renderWhoamiBtn();
   // Ensure trip_id exists before loading local data
   (function(){

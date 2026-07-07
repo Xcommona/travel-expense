@@ -154,6 +154,12 @@
   .cat-bar-fill{height:100%;background:linear-gradient(90deg,var(--brand),#2e75b6);border-radius:3px;min-width:2px}
   .cat-bar-row .amt{text-align:right;font-weight:600;color:var(--brand)}
   .cat-bar-row .pct{text-align:right;color:var(--ink-soft);font-size:11px}
+  .total.clickable{cursor:pointer;user-select:none;transition:all .15s;border-bottom:1px dashed var(--brand);padding-bottom:1px}
+  .total.clickable:hover{color:var(--brand)}
+  .cat-popup{position:absolute;top:100%;right:0;margin-top:4px;background:var(--card);border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:280px;max-width:360px;padding:12px 14px}
+  .cat-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .cat-popup-head span{font-weight:600;font-size:13px;color:var(--brand)}
+  .cat-popup-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);padding:0;line-height:1}
   .modal-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
   .modal-mask.open{display:flex}
   .modal{background:#fff;border-radius:10px;box-shadow:0 20px 40px rgba(0,0,0,.15);max-width:480px;width:100%;max-height:85vh;display:flex;flex-direction:column}
@@ -268,22 +274,19 @@
   <!-- 2. List -->
   <div class="card">
     <h2><span class="num">2</span> 已录支出 <span class="badge" id="listBadge">0 笔</span></h2>
-    <div class="list-header"><span>实时同步中 · 多人可同时编辑</span><span class="total" id="listTotal">合计 ¥0.00</span></div>
+    <div class="list-header" style="position:relative"><span>实时同步中 · 多人可同时编辑</span><span class="total clickable" id="listTotal" onclick="openCategoryPopup(event)" title="点击查看分类统计">合计 ¥0.00</span></div>
     <table class="desktop"><thead><tr><th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明</th><th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th><th style="width:120px">参与人</th><th style="width:86px">操作</th></tr></thead><tbody id="expenseBody"></tbody></table>
     <div class="expense-cards-mobile" id="expenseCards"></div>
   </div>
 
-  <!-- 3. Summary -->
-  <div class="card"><h2><span class="num">3</span> 个人汇总</h2><div class="net-grid" id="netGrid"></div><div class="hint" id="netCheck"></div></div>
+  <!-- Category popup -->
+<div class="cat-popup" id="catPopup" style="display:none"><div class="cat-popup-head"><span>分类统计</span><button class="cat-popup-close" onclick="closeCategoryPopup()">×</button></div><div class="cat-bars" id="catPopupBars"></div></div>
 
-  <!-- 4. Category -->
-  <div class="card"><h2 style="cursor:pointer" onclick="toggleCategoryAnalysis()"><span class="num">4</span> <span id="catHeader">▸ 分类分析</span></h2><div class="cat-bars" id="catBars" style="display:none"></div></div>
-
-  <footer>数据通过 Supabase 实时同步 · 类目/成员自由编辑 · 仅录入人可编辑删除（密码 1234 豁免）</footer>
+<footer>数据通过 Supabase 实时同步 · 类目/成员自由编辑 · 仅录入人可编辑删除</footer>
 </div>
 
 <!-- ===== Members modal ===== -->
-<div class="modal-mask" id="membersModal"><div class="modal"><div class="modal-header"><h2>👥 出行成员</h2><button class="close" onclick="closeMembersModal()">×</button></div><div class="modal-body"><div id="memberList"></div><div class="add-member-row"><input type="text" id="newMemberInput" placeholder="输入姓名，回车添加" onkeydown="if(event.key==='Enter')addMember()"><button onclick="addMember()">添加</button></div><div class="modal-help">添加所有人即可。删除成员会同时删除相关支出。</div></div></div></div>
+<div class="modal-mask" id="membersModal"><div class="modal"><div class="modal-header"><h2>👥 出行成员</h2><button class="close" onclick="closeMembersModal()">×</button></div><div class="modal-body"><div id="memberList"></div><div class="add-member-row"><input type="text" id="newMemberInput" placeholder="输入姓名，回车添加" onkeydown="if(event.key==='Enter')addMember()"><button onclick="addMember()">添加</button></div><div class="modal-help">添加所有人即可。删除成员会同时删除相关支出。</div><div id="netInModal" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"></div></div></div></div>
 
 <!-- ===== Categories modal ===== -->
 <div class="modal-mask" id="categoriesModal"><div class="modal"><div class="modal-header"><h2>🏷 编辑类目</h2><button class="close" onclick="closeCategoriesModal()">×</button></div><div class="modal-body"><div id="catList"></div><div class="add-member-row"><input type="text" id="newCatInput" placeholder="新类目名称" onkeydown="if(event.key==='Enter')addCategory()"><button onclick="addCategory()">添加</button></div><div class="modal-help">修改后表单自动更新。已有支出不受影响。</div></div></div></div>
@@ -298,7 +301,7 @@
 <div class="modal-mask" id="shareModal"><div class="modal"><div class="modal-header"><h2>分享给朋友</h2><button class="close" onclick="closeShareModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">朋友点开看到同一份数据，实时同步。</p><label>共享链接</label><input type="text" id="shareUrl" readonly onclick="this.select()"><div class="modal-help">不要发到公共场合。</div></div><div class="modal-footer"><button class="primary" onclick="copyShareLink()">📋 复制链接</button></div></div></div>
 
 <!-- ===== Settlement modal ===== -->
-<div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px"><div style="font-size:11px;color:var(--ink-soft)"><div><span id="resetLink" style="cursor:pointer;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='.5'" onclick="showResetPrompt()">结束本次出行 · 清空数据</span><span id="resetPrompt" style="display:none;margin-left:8px">密码 <input type="password" id="resetPwd" maxlength="6" style="width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit" onkeydown="if(event.key==='Enter')confirmReset()"> <button onclick="confirmReset()" style="background:var(--bad);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit">确认</button> <button onclick="hideResetPrompt()" style="background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 4px">取消</button></span></div><div style="margin-top:4px"><span style="cursor:pointer;opacity:0;font-size:10px" onclick="openSettingsModal()">修改 Supabase 配置 · 密码 1234</span></div></div><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
+<div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px"><div style="font-size:11px;color:var(--ink-soft)"><div><span id="resetLink" style="cursor:pointer;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='.5'" onclick="showResetPrompt()">结束本次出行 · 清空数据</span><span id="resetPrompt" style="display:none;margin-left:8px">密码 <input type="password" id="resetPwd" maxlength="6" style="width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit" onkeydown="if(event.key==='Enter')confirmReset()"> <button onclick="confirmReset()" style="background:var(--bad);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit">确认</button> <button onclick="hideResetPrompt()" style="background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 4px">取消</button></span></div><div style="margin-top:4px"><span style="cursor:pointer;opacity:0;font-size:10px" onclick="openSettingsModal()">修改 Supabase 配置</span></div></div><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
 
 <!-- ===== Edit modal (separate from form) ===== -->
 <div class="modal-mask" id="editModal"><div class="modal wide"><div class="modal-header"><h2>✏ 编辑支出</h2><button class="close" onclick="closeEditModal()">×</button></div><div class="modal-body">
@@ -330,7 +333,7 @@ const HARDCODED = {
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
 const LS_WHOAMI='whoami',LS_CATS='custom_categories',SUPER_PWD='1234';
-let sb=null,mode='local',TRIP_ID=null,_superOK=false;
+let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false;
 let state={members:[],expenses:[]};
 let editingId=null,isFetching=false,_tempImages=[],_editImages=[];
 const DEFAULT_CATS=['餐饮','交通','住宿','门票','购物','其他'];
@@ -356,7 +359,7 @@ function canEditOrDelete(expense){
   return false;
 }
 function promptSuperPassword(actionFn,expense){
-  const pwd=prompt('此支出由「'+esc(expense.created_by||'未知')+'」录入。仅录入人可编辑/删除。\n输入管理员密码 1234 可跨用户操作：');
+  const pwd=prompt('此支出由「'+esc(expense.created_by||'未知')+'」录入。仅录入人可编辑/删除。\n输入管理员密码可跨用户操作：');
   if(pwd===SUPER_PWD){_superOK=true;actionFn()}else if(pwd!==null){showToast('密码错误，仅录入人可操作')}
 }
 
@@ -396,7 +399,21 @@ async function delExpenseRemote(id){await sb.from('expenses').delete().eq('id',i
 // ============================================================
 // MODALS: Members, Categories, Whoami
 // ============================================================
-function renderMemberModal(){const list=document.getElementById('memberList');list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:20px 0;text-align:center;font-size:13px">还没有成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.className='member-list-item';div.innerHTML=`<span class="name">${esc(m.name)}</span><button onclick="removeMember('${m.id}')">删除</button>`;list.appendChild(div)})}}
+function renderMemberModal(){
+  const list=document.getElementById('memberList');
+  const netEl=document.getElementById('netInModal');
+  list.innerHTML='';
+  if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:20px 0;text-align:center;font-size:13px">还没有成员</div>'}
+  else{state.members.forEach(m=>{
+    const div=document.createElement('div');div.className='member-list-item';
+    const delBtn=_adminDelete?`<button onclick="removeMember('${m.id}')">删除</button>`:'';
+    div.innerHTML=`<span class="name">${esc(m.name)}</span>${delBtn}`;
+    list.appendChild(div)
+  })}
+
+  // render net in modal
+  renderNetInModal(netEl);
+}
 function openMembersModal(){renderMemberModal();document.getElementById('membersModal').classList.add('open')}
 function closeMembersModal(){document.getElementById('membersModal').classList.remove('open')}
 async function addMember(){const inp=document.getElementById('newMemberInput');if(!inp)return;const name=inp.value.trim();if(!name)return;if(state.members.some(m=>m.name===name)){showToast('已有同名成员');return}if(mode==='remote'&&sb){try{const data=await addMemberRemote(name);state.members.push({id:data.id,name:data.name})}catch(e){showToast('添加失败:'+e.message);return}}else{state.members.push({id:uid(),name});saveLocal()}inp.value='';renderMemberModal();renderAll();setTimeout(()=>inp.focus(),30)}
@@ -422,6 +439,8 @@ function unlockSettings(){
   const pwd=document.getElementById('settingsPwd').value;
   if(pwd!==SUPER_PWD){showToast('密码错误');return}
   _superOK=true;
+  _adminDelete=true;
+  showToast('管理员已解锁·设置和删除功能已启用');
   const body=document.getElementById('settingsBody');
   const cfg=getConfig();
   body.innerHTML=`
@@ -587,10 +606,38 @@ function renderExpenseList(){
 // Summary, Category, Settlement
 // ============================================================
 function computeBalances(){const bal={};state.members.forEach(m=>bal[m.name]={paid:0,owe:0});state.expenses.forEach(e=>{if(!bal[e.payer])bal[e.payer]={paid:0,owe:0};(e.participants||[]).forEach(p=>{if(!bal[p])bal[p]={paid:0,owe:0}})});state.expenses.forEach(e=>{bal[e.payer].paid+=e.amount;const parts=e.participants||[],w=e.weights||{},totalW=parts.reduce((s,n)=>s+(w[n]||1),0);parts.forEach(p=>{bal[p].owe+=totalW>0?r2(e.amount*(w[p]||1)/totalW):0})});Object.keys(bal).forEach(k=>{bal[k].paid=r2(bal[k].paid);bal[k].owe=r2(bal[k].owe);bal[k].net=r2(bal[k].paid-bal[k].owe)});return bal}
-function renderSummary(){const grid=document.getElementById('netGrid');grid.innerHTML='';if(state.members.length===0){grid.innerHTML='<div class="hint" style="grid-column:1/-1">先添加成员。</div>';document.getElementById('netCheck').textContent='';return}const bal=computeBalances(),allNames=new Set([...state.members.map(m=>m.name),...Object.keys(bal)]);allNames.forEach(name=>{const b=bal[name],cls=b.net>0.005?'positive':(b.net<-0.005?'negative':'zero'),tag=b.net>0.005?'应收':(b.net<-0.005?'应付':'已结清'),div=document.createElement('div');div.className='net-chip '+cls;div.innerHTML=`<span class="name">${esc(name)}</span><div class="row"><span>已付</span><span>${fmt(b.paid)}</span></div><div class="row"><span>应付</span><span>${fmt(b.owe)}</span></div><span class="net">${fmt(b.net)}</span><span class="tag">${tag}</span>`;grid.appendChild(div)});const sum=Object.values(bal).reduce((s,b)=>s+b.net,0),check=document.getElementById('netCheck');if(Math.abs(sum)>0.5){check.innerHTML='⚠ 净额合计≠0，数据可能不一致';check.style.color='var(--bad)'}else{check.innerHTML='✓ 数据自洽';check.style.color='var(--good)'}}
+function renderNetInModal(el){
+  if(!el)return;
+  el.innerHTML='';
+  if(state.members.length===0){el.innerHTML='';return}
+  const bal=computeBalances(),allNames=new Set([...state.members.map(m=>m.name),...Object.keys(bal)]);
+  const sum=Object.values(bal).reduce((s,b)=>s+b.net,0);
+  let html='<div style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink-soft)">个人汇总</div><div style="display:flex;flex-wrap:wrap;gap:4px">';
+  allNames.forEach(name=>{const b=bal[name],cls=b.net>0.005?'positive':(b.net<-0.005?'negative':'zero'),tag=b.net>0.005?'应收':(b.net<-0.005?'应付':'已结清');html+=`<div style="background:var(--bg);border-radius:6px;padding:4px 8px;font-size:11px;line-height:1.4"><span style="font-weight:600">${esc(name)}</span> ${fmt(b.paid)}付 / ${fmt(b.owe)}应 <span style="color:${b.net>0.005?'var(--good)':(b.net<-0.005?'var(--bad)':'inherit')}">${fmt(b.net)} ${tag}</span></div>`});
+  html+='</div>';
+  if(Math.abs(sum)>0.5)html+='<div style="font-size:10px;color:var(--bad);margin-top:4px">⚠ 数据不一致</div>';
+  else html+='<div style="font-size:10px;color:var(--good);margin-top:4px">✓ 数据自洽</div>';
+  el.innerHTML=html
+}
+function renderSummary(){/* summary moved to members modal */}
 
-function toggleCategoryAnalysis(){const body=document.getElementById('catBars'),header=document.getElementById('catHeader');if(body.style.display==='none'){body.style.display='flex';header.textContent='▾ 分类分析';renderCategory()}else{body.style.display='none';header.textContent='▸ 分类分析'}}
-function renderCategory(){const cats=getCategories(),totals={};cats.forEach(c=>totals[c]=0);state.expenses.forEach(e=>{if(totals[e.category]!==undefined)totals[e.category]+=e.amount});const grand=cats.reduce((s,c)=>s+totals[c],0),container=document.getElementById('catBars');container.innerHTML='';cats.forEach(c=>{const t=totals[c],pct=grand>0?(t/grand*100):0,row=document.createElement('div');row.className='cat-bar-row';row.innerHTML=`<div>${c}</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div><div class="amt">${fmt(t)}</div><div class="pct">${pct.toFixed(1)}%</div>`;container.appendChild(row)});if(grand===0)container.innerHTML='<div class="hint">还没有支出数据。</div>'}
+function openCategoryPopup(e){
+  e.stopPropagation();
+  const popup=document.getElementById('catPopup');
+  if(popup.style.display==='block'){closeCategoryPopup();return}
+  const bars=document.getElementById('catPopupBars');
+  const cats=getCategories(),totals={};cats.forEach(c=>totals[c]=0);
+  state.expenses.forEach(ex=>{if(totals[ex.category]!==undefined)totals[ex.category]+=ex.amount});
+  const grand=cats.reduce((s,c)=>s+totals[c],0);
+  bars.innerHTML='';
+  if(grand===0){bars.innerHTML='<div class="hint" style="font-size:12px;padding:8px 0">还没有支出数据</div>'}
+  else{
+    cats.forEach(c=>{const t=totals[c],pct=grand>0?(t/grand*100):0,row=document.createElement('div');row.className='cat-bar-row';row.innerHTML=`<div>${c}</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div><div class="amt">${fmt(t)}</div><div class="pct">${pct.toFixed(1)}%</div>`;bars.appendChild(row)})
+  }
+  popup.style.display='block';
+  setTimeout(()=>document.addEventListener('click',closeCategoryPopup,{once:true}),0)
+}
+function closeCategoryPopup(){document.getElementById('catPopup').style.display='none'}
 
 // ============================================================
 // Settlement
@@ -617,7 +664,7 @@ async function copySettlement(){if(state.expenses.length===0){showToast('暂无�
 // ============================================================
 // Render all
 // ============================================================
-function renderAll(){renderForm();renderExpenseList();renderSummary();if(document.getElementById('catBars').style.display!=='none')renderCategory()}
+function renderAll(){renderForm();renderExpenseList();renderSummary()}
 
 // ============================================================
 // INIT

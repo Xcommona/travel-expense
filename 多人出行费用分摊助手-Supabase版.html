@@ -6,9 +6,43 @@
 <title>出行费用分摊 · 实时协作版</title>
 <script>
 (function loadSDK(){
-  var CDNS=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','https://unpkg.com/@supabase/supabase-js@2','https://registry.npmmirror.com/@supabase/supabase-js/2.49.4/files/dist/umd/supabase.min.js'];
-  var tries=0, TIMEOUT=6000;
-  function tryNext(){if(tries>=CDNS.length)return;var s=document.createElement('script');s.src=CDNS[tries];s.async=true;var fallback=setTimeout(function(){s.onload=null;s.remove();tries++;tryNext()},TIMEOUT);s.onload=function(){clearTimeout(fallback)};s.onerror=function(){clearTimeout(fallback);s.remove();tries++;tryNext()};document.head.appendChild(s)}tryNext()
+  var CDNS=[
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://registry.npmmirror.com/@supabase/supabase-js/2.49.4/files/dist/umd/supabase.min.js'
+  ];
+  var tries=0, TIMEOUT=8000;
+  function failAll(){
+    window.__supabaseSDKFailed=true;
+    console.warn('[Supabase] All CDNs exhausted, SDK not loaded');
+  }
+  function tryNext(){
+    if(tries>=CDNS.length){failAll();return}
+    var s=document.createElement('script');
+    s.src=CDNS[tries];
+    s.async=true;
+    var t0=Date.now(), fallback=setTimeout(function(){
+      s.onload=null;s.onerror=null;s.remove();
+      console.warn('[Supabase] CDN timeout: '+CDNS[tries]);
+      tries++;tryNext();
+    },TIMEOUT);
+    s.onload=function(){
+      clearTimeout(fallback);
+      if(!window.supabase){
+        console.warn('[Supabase] CDN loaded but window.supabase not set: '+CDNS[tries]);
+        s.remove();tries++;tryNext();
+      }else{
+        console.log('[Supabase] SDK loaded from '+CDNS[tries]+' in '+(Date.now()-t0)+'ms');
+      }
+    };
+    s.onerror=function(){
+      clearTimeout(fallback);s.remove();
+      console.warn('[Supabase] CDN error: '+CDNS[tries]);
+      tries++;tryNext();
+    };
+    document.head.appendChild(s)
+  }
+  tryNext()
 })();
 </script>
 <style>
@@ -329,19 +363,19 @@ function promptSuperPassword(actionFn,expense){
 // ============================================================
 // CONNECTION
 // ============================================================
-function getConfig(){const lsUrl=localStorage.getItem(LS_KEYS.url)||'',lsKey=localStorage.getItem(LS_KEYS.key)||'',lsTrip=localStorage.getItem(LS_KEYS.trip)||'';return{url:lsUrl||HARDCODED.url,key:lsKey||HARDCODED.key,trip:lsTrip||new URLSearchParams(location.search).get('trip')||''}}
+function getConfig(){var lsUrl=localStorage.getItem(LS_KEYS.url)||'';var lsKey=localStorage.getItem(LS_KEYS.key)||'';var urlTrip=new URLSearchParams(location.search).get('trip')||'';var lsTrip=localStorage.getItem(LS_KEYS.trip)||'';var trip=urlTrip||lsTrip||'';return{url:lsUrl||HARDCODED.url,key:lsKey||HARDCODED.key,trip:trip}}
 function setStatus(st,text,tripId){const dot=document.getElementById('statusDot'),txt=document.getElementById('statusText'),tripDisp=document.getElementById('tripIdDisplay'),s=document.getElementById('shareBtn');dot.className='status-dot '+st;txt.innerHTML=text;if(tripId){tripDisp.style.display='';tripDisp.textContent='trip:'+tripId;s.style.display=mode==='remote'?'':'none'}else{tripDisp.style.display='none';s.style.display='none'}}
-function initConnection(){const cfg=getConfig();if(!cfg.url||!cfg.key){mode='local';setStatus('local','<strong>本地模式</strong>');bootstrapLocal();return}if(!window.supabase){setStatus('connecting','<strong>加载SDK...</strong>');waitSDK(cfg,0);return}doInitConnection(cfg)}
-function waitSDK(cfg,elapsed){if(window.supabase){doInitConnection(cfg);return}if(elapsed>12000){mode='local';setStatus('error','<strong>SDK加载失败</strong>·本地模式');bootstrapLocal();return}setTimeout(function(){waitSDK(cfg,elapsed+500)},500)}
+function initConnection(){const cfg=getConfig();if(!cfg.url||!cfg.key){mode='local';setStatus('local','<strong>本地模式</strong>');bootstrapLocal();return}if(!window.supabase){if(window.__supabaseSDKFailed){mode='local';setStatus('error','<strong>SDK加载失败</strong>·本地模式');bootstrapLocal();return}setStatus('connecting','<strong>加载SDK...</strong>');waitSDK(cfg,0);return}doInitConnection(cfg)}
+function waitSDK(cfg,elapsed){if(window.supabase){doInitConnection(cfg);return}if(window.__supabaseSDKFailed||elapsed>15000){mode='local';setStatus('error','<strong>SDK加载失败</strong>·本地模式');bootstrapLocal();return}setTimeout(function(){waitSDK(cfg,elapsed+500)},500)}
 function doInitConnection(cfg){try{sb=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false}});mode='remote';if(!cfg.trip){cfg.trip='trip-'+Math.random().toString(36).slice(2,8);localStorage.setItem(LS_KEYS.trip,cfg.trip);const u=new URL(location.href);u.searchParams.set('trip',cfg.trip);history.replaceState(null,'',u.toString())}else{const u=new URL(location.href);if(!u.searchParams.get('trip')){u.searchParams.set('trip',cfg.trip);history.replaceState(null,'',u.toString())}}TRIP_ID=cfg.trip;setStatus('connecting','<strong>连接中...</strong>',TRIP_ID);bootstrapRemote()}catch(e){setStatus('error','<strong>配置错误</strong>');mode='local';bootstrapLocal()}}
-async function bootstrapRemote(){try{await loadRemote();subscribeRemote();setStatus('connected','<strong>已连接</strong>·实时同步',TRIP_ID);resetForm();renderAll()}catch(e){var msg=e.message||String(e);if(msg.indexOf('fetch')>-1||msg.indexOf('Failed')>-1)msg='api.supabase.com 连接不上';setStatus('error','<strong>'+msg+'</strong>');mode='local';bootstrapLocal()}}
+async function bootstrapRemote(){try{await loadRemote();subscribeRemote();setStatus('connected','<strong>已连接</strong>·实时同步',TRIP_ID);resetForm();renderAll()}catch(e){var msg=e.message||String(e);if(msg.indexOf('fetch')>-1||msg.indexOf('Failed')>-1||msg.indexOf('Network')>-1)msg='连接不上数据库·本地模式';setStatus('error','<strong>'+msg+'</strong>');mode='local';bootstrapLocal()}}
 
 // ============================================================
 // LOCAL
 // ============================================================
 const LS_STATE='travel_expense_v4';
-function loadLocal(){try{const raw=localStorage.getItem(LS_STATE);if(raw)state=JSON.parse(raw)}catch(e){}}
-function saveLocal(){try{localStorage.setItem(LS_STATE,JSON.stringify(state))}catch(e){}}
+function loadLocal(){var key=LS_STATE;if(TRIP_ID)key+='_'+TRIP_ID;try{var raw=localStorage.getItem(key);if(raw)state=JSON.parse(raw)}catch(e){}}
+function saveLocal(){var key=LS_STATE;if(TRIP_ID)key+='_'+TRIP_ID;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
 function bootstrapLocal(){loadLocal();resetForm();renderAll()}
 
 // ============================================================
@@ -475,8 +509,11 @@ async function saveEditExpense(){
   const date=document.getElementById('e_date').value,cat=document.getElementById('e_cat').value,desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,amount=parseFloat(document.getElementById('e_amount').value),note=document.getElementById('e_note').value.trim(),parts=getEditSelParts();
   const weights={};document.querySelectorAll('[data-ew-name]').forEach(el=>{const n=el.dataset.ewName,v=parseFloat(el.value)||1;if(v!==1)weights[n]=v});
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
+  if(isNaN(amount)||amount<=0){showToast('金额无效');return}
+  if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
+  amount=Math.round(amount*100)/100;
   const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note};
-  if(mode==='remote'&&sb){try{await updateExpenseRemote(id,payload);const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload)}catch(err){showToast('保存失败:'+err.message);return}}else{const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload);saveLocal()}
+  if(mode==='remote'&&sb){try{await updateExpenseRemote(id,payload);const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload)}catch(err){var em2=err.message||'';if(em2.indexOf('numeric')>-1||em2.indexOf('overflow')>-1)em2='金额超限，请检查数字';showToast('保存失败:'+em2);return}}else{const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload);saveLocal()}
   closeEditModal();_editImages=[];renderAll();showToast('已保存')
 }
 
@@ -486,9 +523,12 @@ async function saveEditExpense(){
 async function submitExpense(){
   const date=document.getElementById('f_date').value,cat=document.getElementById('f_cat').value,desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,amount=parseFloat(document.getElementById('f_amount').value),note=document.getElementById('f_note').value.trim(),parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
+  if(isNaN(amount)||amount<=0){showToast('金额无效');return}
+  if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
+  amount=Math.round(amount*100)/100;
   const cleanWeights={};for(const n of parts){const v=weights[n]||1;if(v!==1)cleanWeights[n]=v}
   const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note};
-  if(mode==='remote'&&sb){try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}catch(e){showToast('\u4fdd\u5b58\u5931\u8d25:'+e.message);return}}else{state.expenses.push({id:uid(),...payload});saveLocal()}
+  if(mode==='remote'&&sb){try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}catch(e){var em=e.message||'';if(em.indexOf('numeric')>-1||em.indexOf('overflow')>-1)em='金额超限，请检查数字';showToast('保存失败:'+em);return}}else{state.expenses.push({id:uid(),...payload});saveLocal()}
   _tempImages=[];editingId=null;resetForm();renderAll();
 }
 function resetForm(){
@@ -583,7 +623,17 @@ function renderAll(){renderForm();renderExpenseList();renderSummary();if(documen
 // INIT
 // ============================================================
 document.getElementById('f_amount').addEventListener('input',updateFormSummary);
-renderWhoamiBtn();bootstrapLocal();initConnection();
+renderWhoamiBtn();
+  // Ensure trip_id exists before loading local data
+  (function(){
+    var cfg=getConfig();
+    if(cfg.trip){TRIP_ID=cfg.trip}
+    else{TRIP_ID=localStorage.getItem(LS_KEYS.trip)||''}
+    if(!TRIP_ID){TRIP_ID='trip-'+Math.random().toString(36).slice(2,8);localStorage.setItem(LS_KEYS.trip,TRIP_ID)}
+    var u=new URL(location.href);
+    if(!u.searchParams.get('trip')){u.searchParams.set('trip',TRIP_ID);history.replaceState(null,'',u.toString())}
+  })();
+  bootstrapLocal();initConnection();
 setTimeout(()=>{if(state.members.length>0&&!getWhoami())openWhoamiModal()},1500);
 </script>
 </body>

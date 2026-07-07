@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>出行费用分摊 · 实时协作版</title>
+<!-- Supabase SDK ➜ jsdelivr（直连）→ unpkg → npmmirror（国内）→ 超时降级本地模式 -->
+<script>
+(function loadSDK(){
+  var CDNS=[
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+    'https://unpkg.com/@supabase/supabase-js@2',
+    'https://registry.npmmirror.com/@supabase/supabase-js/2.49.4/files/dist/umd/supabase.min.js'
+  ];
+  var tries=0, TIMEOUT=6000;
+  function tryNext(){
+    if(tries>=CDNS.length){ console.warn('Supabase SDK 加载失败，切换本地模式'); return }
+    var s=document.createElement('script');s.src=CDNS[tries];s.async=true;
+    var fallback=setTimeout(function(){s.onload=null;s.remove();tries++;tryNext()},TIMEOUT);
+    s.onload=function(){clearTimeout(fallback);console.log('Supabase SDK loaded from',CDNS[tries].slice(0,40)+'...')};
+    s.onerror=function(){clearTimeout(fallback);s.remove();tries++;tryNext()};
+    document.head.appendChild(s);
+  }
+  tryNext();
+})();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f7fa; --card: #ffffff; --ink: #1f2937; --ink-soft: #6b7280;
+    --line: #e5e7eb; --line-strong: #d1d5db; --brand: #1f4e79; --brand-soft: #ddebf7;
+    --gold: #bf8f00; --gold-soft: #fff2cc; --good: #548235; --good-soft: #e2efda;
+    --bad: #c00000; --bad-soft: #fce4d6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.05),0 1px 2px rgba(0,0,0,0.03);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08),0 2px 4px -1px rgba(0,0,0,0.04);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;font-size:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* Status bar */
+  .status-bar{
+    background:#fff;border-bottom:1px solid var(--line);
+    padding:6px 16px;display:flex;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap;
+  }
+  .status-dot{width:10px;height:10px;border-radius:50%;background:#d1d5db;flex-shrink:0;transition:background .3s}
+  .status-dot.connected{background:var(--good);box-shadow:0 0 0 3px var(--good-soft)}
+  .status-dot.connecting{background:var(--gold);box-shadow:0 0 0 3px var(--gold-soft);animation:pulse 1.5s infinite}
+  .status-dot.error{background:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+  .status-dot.local{background:#94a3b8}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .status-text{color:var(--ink-soft)}
+  .status-text strong{color:var(--ink)}
+  .trip-id{background:var(--brand-soft);color:var(--brand);padding:2px 8px;border-radius:10px;font-family:ui-monospace;font-size:11px;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status-actions{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .whoami-btn{background:var(--gold-soft);color:var(--gold);border:none;padding:4px 10px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;white-space:nowrap}
+  .whoami-btn.set{background:var(--good-soft);color:var(--good)}
+  .status-bar button{background:#fff;border:1px solid var(--line-strong);color:var(--ink);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;font-family:inherit}
+  .status-bar button:hover{background:var(--bg);border-color:var(--brand);color:var(--brand)}
+  .status-bar button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .settle-nav-btn{background:var(--gold-soft)!important;color:var(--gold)!important;border-color:var(--gold)!important;font-weight:600!important}
+
+  .container{max-width:920px;margin:0 auto;padding:14px 16px 60px}
+  header{margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
+  header h1{font-size:20px;margin:0 0 2px;color:var(--brand);font-weight:700}
+  header .sub{color:var(--ink-soft);font-size:12px}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px;
+  }
+  .card.highlight{border-left:3px solid var(--gold);box-shadow:var(--shadow-md)}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--brand);display:flex;align-items:center;gap:7px;font-weight:700}
+  .card h2 .num{background:var(--brand);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .card h2 .badge{background:var(--brand-soft);color:var(--brand);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-left:auto}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:6px}
+
+  /* Members row */
+  .members-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .members-row .chip{background:var(--brand-soft);color:var(--brand);padding:3px 8px;border-radius:10px;font-weight:600;font-size:12px}
+  .members-row button{background:transparent;border:1px dashed var(--line-strong);color:var(--ink-soft);padding:3px 8px;border-radius:10px;cursor:pointer;font-size:12px;font-family:inherit}
+
+  /* Form */
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
+  .form-field{display:flex;flex-direction:column;gap:3px}
+  .form-field.full{grid-column:1/-1}
+  .form-field label{font-size:11px;color:var(--ink-soft);font-weight:600;display:flex;align-items:center;gap:6px}
+  .form-field label .edit-link{font-size:10px;color:var(--brand);cursor:pointer;font-weight:normal;text-decoration:underline}
+  .form-field input,.form-field select{
+    padding:9px 10px;border:1px solid var(--line-strong);border-radius:6px;
+    font-size:14px;font-family:inherit;background:#fff;width:100%;appearance:none;
+  }
+  .form-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+  .form-field input:focus,.form-field select:focus{outline:2px solid var(--brand);outline-offset:-1px;border-color:var(--brand)}
+  .form-field input[type=number]{text-align:right}
+
+  /* Participants */
+  .participants{background:var(--gold-soft);padding:8px 10px;border-radius:8px;display:flex;flex-wrap:wrap;gap:6px 10px;border:1px solid #f5e3a3}
+  .participants .empty{color:var(--ink-soft);font-size:12px;font-style:italic}
+  .check-pill{display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;padding:5px 10px;border-radius:12px;background:#fff;border:1px solid var(--line-strong);font-size:13px;transition:all .1s}
+  .check-pill.checked{background:var(--good);color:#fff;border-color:var(--good);font-weight:600}
+  .participants-control{display:flex;gap:6px;margin-top:4px;font-size:12px;color:var(--ink-soft)}
+  .participants-control a{color:var(--brand);cursor:pointer;margin-right:6px}
+
+  /* Weights */
+  .weights-toggle{display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--ink-soft);font-size:12px;font-weight:600;margin-top:4px}
+  .weights-toggle .arrow{transition:transform .2s;display:inline-block;font-size:10px}
+  .weights-toggle.open .arrow{transform:rotate(90deg)}
+  .weights-panel{display:none;margin-top:6px;padding:8px 10px;background:#f9fafb;border-radius:6px;border:1px solid var(--line)}
+  .weights-panel.show{display:block}
+  .weight-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .weight-row:last-child{margin-bottom:0}
+  .weight-row .w-name{font-size:13px;min-width:50px;font-weight:600}
+  .weight-row input{width:50px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:4px;font-size:13px;text-align:center;font-family:inherit}
+  .weight-row .w-unit{font-size:12px;color:var(--ink-soft)}
+
+  /* Images */
+  .images-preview{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .images-preview .thumb{
+    width:56px;height:56px;border-radius:6px;border:1px solid var(--line);
+    background-size:cover;background-position:center;cursor:pointer;position:relative;
+  }
+  .images-preview .thumb .del-img{
+    position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+    background:var(--bad);color:#fff;font-size:10px;line-height:18px;text-align:center;
+    cursor:pointer;display:none;
+  }
+  .images-preview .thumb:hover .del-img{display:block}
+  .add-img-btn{
+    display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);
+    border-radius:6px;padding:6px 10px;font-size:12px;color:var(--ink-soft);cursor:pointer;
+    background:transparent;font-family:inherit;margin-top:4px;
+  }
+  .add-img-btn:hover{border-color:var(--brand);color:var(--brand)}
+
+  .form-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button.primary{background:var(--brand);color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:var(--shadow)}
+  button.primary:hover{background:#183d5e}
+  button.secondary{background:#fff;color:var(--brand);border:1px solid var(--brand);padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit}
+  button.ghost{background:transparent;color:var(--ink-soft);border:none;padding:7px 10px;cursor:pointer;font-size:13px;font-family:inherit}
+  button.ghost:hover{color:var(--bad)}
+  .form-summary{color:var(--ink-soft);font-size:13px}
+  .form-summary strong{color:var(--brand);font-size:14px}
+
+  /* Desktop table */
+  .list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;color:var(--ink-soft)}
+  .list-header .total{background:var(--brand-soft);padding:3px 10px;border-radius:10px;color:var(--brand);font-weight:600}
+  table.desktop{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-weight:600;color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#f9fafb}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.cat span{background:#f1f5f9;padding:1px 7px;border-radius:7px;font-size:11px;color:var(--ink-soft)}
+  td.actions{text-align:right;white-space:nowrap}
+  td.actions button{background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:12px;padding:3px 5px;font-family:inherit}
+  td.actions button:hover{color:var(--brand)}
+  td.actions button.del:hover{color:var(--bad)}
+  tr.editing{background:var(--gold-soft)}
+  tr.empty-row td{text-align:center;color:var(--ink-soft);padding:20px;font-style:italic}
+  .parts-display{font-size:11px;color:var(--ink-soft)}
+  .parts-display .me{background:var(--gold-soft);padding:1px 4px;border-radius:3px;color:var(--gold);font-weight:600}
+  .img-indicator{display:inline-block;background:var(--brand-soft);color:var(--brand);padding:1px 5px;border-radius:3px;font-size:10px;cursor:pointer;margin-left:4px}
+
+  /* Mobile cards */
+  .expense-cards-mobile{display:none}
+  .exp-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;flex-direction:column;gap:4px}
+  .exp-card .top-line{display:flex;justify-content:space-between;align-items:baseline}
+  .exp-card .ec-cat{background:#f1f5f9;color:var(--ink-soft);padding:1px 6px;border-radius:6px;font-size:11px}
+  .exp-card .ec-amount{font-weight:700;font-size:15px;color:var(--brand)}
+  .exp-card .ec-desc{font-size:13px;font-weight:600}
+  .exp-card .ec-meta{font-size:12px;color:var(--ink-soft)}
+  .exp-card .ec-imgs{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .exp-card .ec-imgs .thumb{width:36px;height:36px;border-radius:4px;background-size:cover;background-position:center;cursor:pointer;border:1px solid var(--line)}
+  .exp-card .ec-actions{margin-top:4px;display:flex;gap:8px}
+  .exp-card .ec-actions button{font-size:12px;background:transparent;border:none;color:var(--brand);cursor:pointer;padding:2px 0;font-family:inherit}
+  .exp-card .ec-actions button.del{color:var(--bad)}
+
+  /* Net grid */
+  .net-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:4px}
+  .net-chip{padding:10px 12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+  .net-chip .name{font-size:13px;font-weight:600}
+  .net-chip .row{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft)}
+  .net-chip .net{font-size:16px;font-weight:700;margin-top:2px}
+  .net-chip .tag{font-size:10px;margin-top:1px}
+  .net-chip.positive .net{color:var(--good)}.net-chip.positive .tag{color:var(--good)}
+  .net-chip.negative .net{color:var(--bad)}.net-chip.negative .tag{color:var(--bad)}
+  .net-chip.zero .net{color:var(--ink-soft)}
+
+  /* Category bars */
+  .cat-bars{display:flex;flex-direction:column;gap:6px}
+  .cat-bar-row{display:grid;grid-template-columns:50px 1fr 70px 40px;gap:8px;align-items:center;font-size:13px}
+  .cat-bar-track{background:#f1f5f9;height:14px;border-radius:3px;overflow:hidden}
+  .cat-bar-fill{height:100%;background:linear-gradient(90deg,var(--brand),#2e75b6);border-radius:3px;min-width:2px}
+  .cat-bar-row .amt{text-align:right;font-weight:600;color:var(--brand)}
+  .cat-bar-row .pct{text-align:right;color:var(--ink-soft);font-size:11px}
+
+  /* ===== Modals ===== */
+  .modal-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
+  .modal-mask.open{display:flex}
+  .modal{background:#fff;border-radius:10px;box-shadow:0 20px 40px rgba(0,0,0,.15);max-width:480px;width:100%;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column}
+  .modal.wide{max-width:640px}
+  .modal-header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1;border-radius:10px 10px 0 0}
+  .modal-header h2{font-size:15px;margin:0;color:var(--brand)}
+  .modal-header .close{background:transparent;border:none;font-size:22px;color:var(--ink-soft);cursor:pointer;line-height:1;padding:0}
+  .modal-body{padding:16px 18px;font-size:13px;flex:1;overflow-y:auto}
+  .modal-body label{display:block;font-size:11px;color:var(--ink-soft);font-weight:600;margin-top:10px;margin-bottom:3px}
+  .modal-body input{width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:6px;font-size:14px;font-family:inherit}
+  .modal-body input:focus{outline:2px solid var(--brand);outline-offset:-1px}
+  .modal-footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .modal-help{background:#f9fafb;padding:10px;border-radius:6px;font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .modal-help code{background:#fff;padding:1px 4px;border-radius:3px;font-size:11px;color:var(--brand)}
+
+  /* Member list items */
+  .member-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .member-list-item:last-child{border-bottom:none}
+  .member-list-item .name{font-weight:600;font-size:14px}
+  .member-list-item button{background:transparent;border:none;color:var(--bad);cursor:pointer;font-size:12px;font-family:inherit;padding:4px 6px}
+  .add-member-row{display:flex;gap:6px;margin-top:10px}
+  .add-member-row input{flex:1;padding:8px 10px;border:1px dashed var(--line-strong);border-radius:6px;font-size:14px;font-family:inherit}
+  .add-member-row input:focus{outline:2px solid var(--brand);outline-offset:-1px;border-style:solid}
+  .add-member-row button{background:var(--brand);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;font-size:13px}
+
+  /* Category list items */
+  .cat-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .cat-list-item:last-child{border-bottom:none}
+  .cat-list-item .name{font-size:14px}
+  .cat-list-item button{background:transparent;border:none;color:var(--bad);cursor:pointer;font-size:12px;font-family:inherit;padding:4px 6px}
+
+  /* Image lightbox */
+  .lightbox-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center;padding:20px}
+  .lightbox-mask.open{display:flex}
+  .lightbox-mask img{max-width:95vw;max-height:90vh;border-radius:6px;object-fit:contain}
+  .lightbox-mask .lb-close{position:absolute;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;z-index:1;background:none;border:none}
+
+  /* Settlement in modal */
+  .settle-transfer-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
+  .settle-transfer-item .idx{width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .settle-transfer-item .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .who .name-pill{padding:2px 8px;border-radius:12px;font-weight:600;font-size:13px}
+  .who .from{background:var(--bad-soft);color:var(--bad)}.who .to{background:var(--good-soft);color:var(--good)}
+  .who .arrow{color:var(--ink-soft)}
+  .settle-transfer-item .amount{font-weight:700;font-size:15px;color:var(--brand)}
+  .result-empty{text-align:center;color:var(--ink-soft);padding:24px 0;font-size:13px}
+  .stat{background:var(--brand-soft);padding:10px 14px;border-radius:8px;border-left:3px solid var(--brand);min-width:100px}
+  .stat .label{font-size:10px;color:var(--ink-soft);text-transform:uppercase}
+  .stat .value{font-size:20px;font-weight:700;color:var(--brand);margin-top:1px}
+  .result-summary{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;z-index:3000;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  footer{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-soft)}
+
+  /* ===== MOBILE ===== */
+  @media (max-width:640px){
+    .container{padding:10px 10px 50px}
+    header h1{font-size:18px}
+    header .sub{font-size:11px}
+    .status-bar{padding:5px 10px;gap:6px;font-size:11px}
+    .status-bar button{padding:3px 8px;font-size:11px}
+    .trip-id{font-size:10px;max-width:100px}
+    .card{padding:10px 12px;margin-bottom:10px;border-radius:8px}
+    .card h2{font-size:13px;gap:5px}
+    .card h2 .num{width:18px;height:18px;font-size:10px}
+    .form-grid{grid-template-columns:1fr!important;gap:8px}
+    .form-field input,.form-field select{padding:10px;font-size:16px}
+    .form-field select{background-position:right 12px center;padding-right:32px}
+    .check-pill{padding:7px 12px;font-size:14px}
+    .weights-toggle{font-size:13px}
+    button.primary{padding:11px 20px;font-size:15px}
+    table.desktop{display:none}
+    .expense-cards-mobile{display:block}
+    .net-grid{grid-template-columns:1fr 1fr;gap:6px}
+    .net-chip{padding:8px 10px}
+    .cat-bar-row{grid-template-columns:44px 1fr 56px 34px;gap:6px;font-size:12px}
+    .modal{max-width:100%;border-radius:12px 12px 0 0;max-height:92vh}
+    .modal-header h2{font-size:14px}
+    .modal-body input{font-size:16px}
+    .stat{padding:8px 12px;min-width:90px}
+    .stat .value{font-size:18px}
+    .settle-transfer-item{padding:8px 10px;gap:8px}
+    .settle-transfer-item .amount{font-size:14px}
+    footer{font-size:10px}
+  }
+  @media (min-width:641px) and (max-width:900px){
+    .form-grid{grid-template-columns:1fr 1fr}
+    .form-field.full{grid-column:1/-1}
+    .net-grid{grid-template-columns:repeat(3,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span class="status-dot" id="statusDot"></span>
+  <span class="status-text" id="statusText">未连接</span>
+  <span class="trip-id" id="tripIdDisplay" style="display:none"></span>
+  <div class="status-actions">
+    <button class="whoami-btn" id="whoamiBtn" onclick="openWhoamiModal()">👤 未选择</button>
+    <button onclick="openMembersModal()">👥 成员</button>
+    <button onclick="openCategoriesModal()">🏷 类目</button>
+    <button onclick="openConfigModal()" id="configBtn">⚙</button>
+    <button class="settle-nav-btn" onclick="openSettlementModal()">💰 结算</button>
+    <button onclick="openShareModal()" id="shareBtn" style="display:none">📋 分享</button>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <div>
+      <h1>出行费用分摊</h1>
+      <div class="sub">表单录入 · 类目自定义 · 拍照记账 · 实时协作 · 自动结算</div>
+    </div>
+  </header>
+
+  <!-- 1. Form -->
+  <div class="card highlight">
+    <h2><span class="num">1</span> 录入支出 <span class="badge" id="formMode">新增</span></h2>
+    <div class="form-grid">
+      <div class="form-field"><label>日期</label><input type="date" id="f_date"></div>
+      <div class="form-field"><label>类目 <span class="edit-link" onclick="openCategoriesModal()">编辑</span></label>
+        <select id="f_cat"></select>
+      </div>
+      <div class="form-field"><label>付款人</label><select id="f_payer"></select></div>
+      <div class="form-field"><label>金额（¥）</label><input type="number" id="f_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
+      <div class="form-field full"><label>项目说明</label><input type="text" id="f_desc" placeholder="比如：机场打车、两晚酒店"></div>
+      <div class="form-field full">
+        <label>参与分摊</label>
+        <div class="participants" id="f_participants"><span class="empty">请先加成员（点顶部👥）</span></div>
+        <div class="participants-control" id="participantsControl" style="display:none">
+          <a onclick="selAllParts(true)">✓ 全选</a>
+          <a onclick="selAllParts(false)">✕ 全不选</a>
+        </div>
+      </div>
+      <div class="form-field full">
+        <div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none">
+          <span class="arrow">▸</span> 高级：自定义分摊份数
+        </div>
+        <div class="weights-panel" id="weightsPanel"></div>
+      </div>
+      <div class="form-field full">
+        <label>备注（可选）</label>
+        <input type="text" id="f_note" placeholder="比如：2间×2晚">
+      </div>
+      <div class="form-field full">
+        <label>付款凭证（拍照 / 选图片，最多 5 张）</label>
+        <div class="images-preview" id="f_images"></div>
+        <label class="add-img-btn" for="imgInput">📷 添加图片</label>
+        <input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="primary" id="submitBtn" onclick="submitExpense()">＋ 添加这笔</button>
+      <button class="ghost" id="cancelBtn" style="display:none" onclick="cancelEdit()">取消编辑</button>
+      <span class="form-summary" id="formSummary"></span>
+    </div>
+  </div>
+
+  <!-- 2. List -->
+  <div class="card">
+    <h2><span class="num">2</span> 已录支出 <span class="badge" id="listBadge">0 笔</span></h2>
+    <div class="list-header">
+      <span>实时同步中 · 多人可同时编辑</span>
+      <span class="total" id="listTotal">合计 ¥0.00</span>
+    </div>
+    <table class="desktop" id="expenseTable">
+      <thead><tr>
+        <th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明</th>
+        <th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th>
+        <th style="width:110px">参与人</th><th style="width:76px">操作</th>
+      </tr></thead>
+      <tbody id="expenseBody"></tbody>
+    </table>
+    <div class="expense-cards-mobile" id="expenseCards"></div>
+  </div>
+
+  <!-- 3. Summary -->
+  <div class="card">
+    <h2><span class="num">3</span> 个人汇总</h2>
+    <div class="net-grid" id="netGrid"></div>
+    <div class="hint" id="netCheck"></div>
+  </div>
+
+  <!-- 4. Category analysis (collapsed by default) -->
+  <div class="card">
+    <h2 style="cursor:pointer" onclick="toggleCategoryAnalysis()">
+      <span class="num">4</span> <span id="catHeader">▸ 分类分析</span>
+    </h2>
+    <div class="cat-bars" id="catBars" style="display:none"></div>
+  </div>
+
+  <footer>
+    数据通过 Supabase 实时同步 · 打开同一链接的人看到同一份数据 · 类目/成员自由编辑 · 支持拍照凭证
+  </footer>
+</div>
+
+<!-- ===== Members modal ===== -->
+<div class="modal-mask" id="membersModal"><div class="modal"><div class="modal-header"><h2>👥 出行成员</h2><button class="close" onclick="closeMembersModal()">×</button></div><div class="modal-body"><div id="memberList"></div><div class="add-member-row"><input type="text" id="newMemberInput" placeholder="输入姓名，回车添加" onkeydown="if(event.key==='Enter')addMember()"><button onclick="addMember()">添加</button></div><div class="modal-help">添加所有人即可。删除成员会同时删除相关支出。</div></div></div></div>
+
+<!-- ===== Categories modal ===== -->
+<div class="modal-mask" id="categoriesModal"><div class="modal"><div class="modal-header"><h2>🏷 编辑类目</h2><button class="close" onclick="closeCategoriesModal()">×</button></div><div class="modal-body"><div id="catList"></div><div class="add-member-row"><input type="text" id="newCatInput" placeholder="新类目名称，回车添加" onkeydown="if(event.key==='Enter')addCategory()"><button onclick="addCategory()">添加</button></div><div class="modal-help">修改后表单的类目下拉会自动更新。已有支出不受影响。</div></div></div></div>
+
+<!-- ===== Whoami modal ===== -->
+<div class="modal-mask" id="whoamiModal"><div class="modal"><div class="modal-header"><h2>👤 我是谁？</h2><button class="close" onclick="closeWhoamiModal()">×</button></div><div class="modal-body"><p style="margin:0 0 8px">选完后付款人自动选你，打开不用改。</p><div id="whoamiList"></div></div></div></div>
+
+<!-- ===== Config modal ===== -->
+<div class="modal-mask" id="configModal"><div class="modal"><div class="modal-header"><h2>⚙ 配置 Supabase</h2><button class="close" onclick="closeConfigModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px">在 Supabase Dashboard → Project Settings → API 复制。</p><label>Project URL</label><input type="text" id="cfg_url" placeholder="https://xxxx.supabase.co"><label>Anon Key</label><input type="text" id="cfg_key" placeholder="eyJ..."><label>出行 ID（可留空）</label><input type="text" id="cfg_trip" placeholder="留空自动生成"><div class="modal-help">第一次用？参考 <code>Supabase 配置指南.md</code>。</div></div><div class="modal-footer"><button class="ghost" onclick="useLocalMode()">本地模式</button><button class="primary" onclick="saveConfig()">保存并连接</button></div></div></div>
+
+<!-- ===== Share modal ===== -->
+<div class="modal-mask" id="shareModal"><div class="modal"><div class="modal-header"><h2>分享给朋友</h2><button class="close" onclick="closeShareModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">朋友点开看到同一份数据，实时同步。</p><label>共享链接</label><input type="text" id="shareUrl" readonly onclick="this.select()"><div class="modal-help">不要发到公共场合。</div></div><div class="modal-footer"><button class="primary" onclick="copyShareLink()">📋 复制链接</button></div></div></div>
+
+<!-- ===== Settlement modal ===== -->
+<div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap"><div id="resetArea" style="font-size:11px;color:var(--ink-soft)"><span id="resetLink" style="cursor:pointer;opacity:0.5;transition:opacity .15s" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='0.5'" onclick="showResetPrompt()">结束本次出行 · 清空数据</span><span id="resetPrompt" style="display:none;margin-left:8px">密码 <input type="password" id="resetPwd" maxlength="6" style="width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit" onkeydown="if(event.key==='Enter')confirmReset()"> <button onclick="confirmReset()" style="background:var(--bad);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit">确认</button> <button onclick="hideResetPrompt()" style="background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 4px">取消</button></span></div><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
+
+<!-- ===== Image lightbox ===== -->
+<div class="lightbox-mask" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close">×</button>
+  <img id="lightboxImg" src="" alt="凭证图片">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG & STATE
+// ============================================================
+// ★ 你（发起人）填一次，朋友打开零配置自动连接 ★
+//   → 把 Supabase 的 URL 和 anon key 填在下面两个引号里
+//   → anon key 是公开的，写在 HTML 里安全
+//   → 朋友打开同一个链接（含 ?trip=xxx）自动同步
+//   → 不填也没关系——首次打开点 ⚙ 配置面板手动填
+const HARDCODED = {
+  url: 'https://hunokhekgahgixbkihbu.supabase.co',   // 例：'https://abcd1234.supabase.co'
+  key: 'sb_publishable_uaQM9RJ06PXKC8v4BlqAhA_TK__m3pK',   // 例：'eyJ...' （约 200 字符的 anon key）
+};
+// ============================================================
+const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
+const LS_WHOAMI='whoami',LS_CATS='custom_categories';
+let sb=null,mode='local',TRIP_ID=null;
+let state={members:[],expenses:[]};
+let editingId=null,isFetching=false,_tempImages=[];
+
+const DEFAULT_CATS=['餐饮','交通','住宿','门票','购物','其他'];
+
+// ============================================================
+// UTILS
+// ============================================================
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,10)}
+function fmt(v){if(v===null||v===undefined||isNaN(v))return" —";const s=v<-0.005?"-":"";return s+"¥"+Math.abs(v).toFixed(2)}
+function r2(x){return Math.round(x*100)/100}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function getWhoami(){return localStorage.getItem(LS_WHOAMI)||''}
+function setWhoami(name){localStorage.setItem(LS_WHOAMI,name);renderWhoamiBtn();resetForm()}
+function getCategories(){try{const raw=localStorage.getItem(LS_CATS);return raw?JSON.parse(raw):[...DEFAULT_CATS]}catch(e){return[...DEFAULT_CATS]}}
+function setCategories(arr){localStorage.setItem(LS_CATS,JSON.stringify(arr))}
+
+// ============================================================
+// CONNECTION
+// ============================================================
+function getConfig(){
+  // 优先 localStorage（用户自己填的），其次硬编码（发起人预设的）
+  const lsUrl = localStorage.getItem(LS_KEYS.url) || '';
+  const lsKey = localStorage.getItem(LS_KEYS.key) || '';
+  const lsTrip = localStorage.getItem(LS_KEYS.trip) || '';
+  const url = lsUrl || HARDCODED.url;
+  const key = lsKey || HARDCODED.key;
+  const trip = lsTrip || new URLSearchParams(location.search).get('trip') || '';
+  return { url, key, trip };
+}
+function setStatus(st,text,tripId){const dot=document.getElementById('statusDot'),txt=document.getElementById('statusText'),tripDisp=document.getElementById('tripIdDisplay'),s=document.getElementById('shareBtn');dot.className='status-dot '+st;txt.innerHTML=text;if(tripId){tripDisp.style.display='';tripDisp.textContent='trip:'+tripId;s.style.display=mode==='remote'?'':'none'}else{tripDisp.style.display='none';s.style.display='none'}}
+function initConnection(){
+  const cfg=getConfig();
+  if(!cfg.url||!cfg.key){ mode='local';setStatus('local','<strong>本地模式</strong>（点⚙启用同步）');bootstrapLocal();return }
+  // SDK 动态加载，最多等 12 秒
+  if(!window.supabase){ setStatus('connecting','<strong>加载 SDK...</strong>');waitSDK(cfg,0);return }
+  doInitConnection(cfg);
+}
+function waitSDK(cfg,elapsed){
+  if(window.supabase){ doInitConnection(cfg);return }
+  if(elapsed>12000){ mode='local';setStatus('error','<strong>SDK 加载失败</strong> · 网络不通，无法使用云同步');bootstrapLocal();return }
+  setTimeout(function(){waitSDK(cfg,elapsed+500)},500);
+}
+function doInitConnection(cfg){
+  try{
+    sb=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false}});
+    mode='remote';
+    if(!cfg.trip){cfg.trip='trip-'+Math.random().toString(36).slice(2,8);localStorage.setItem(LS_KEYS.trip,cfg.trip);const u=new URL(location.href);u.searchParams.set('trip',cfg.trip);history.replaceState(null,'',u.toString())}
+    else{const u=new URL(location.href);if(!u.searchParams.get('trip')){u.searchParams.set('trip',cfg.trip);history.replaceState(null,'',u.toString())}}
+    TRIP_ID=cfg.trip;setStatus('connecting','<strong>连接中...</strong>',TRIP_ID);bootstrapRemote()
+  }catch(e){setStatus('error','<strong>配置错误</strong>：'+e.message);mode='local';bootstrapLocal()}
+}
+async function bootstrapRemote(){
+  try{await loadRemote();subscribeRemote();setStatus('connected','<strong>已连接</strong>·实时同步',TRIP_ID);resetForm();renderAll()}
+  catch(e){
+    var msg=e.message||String(e);
+    if(msg.indexOf('fetch')>-1||msg.indexOf('Failed')>-1||msg.indexOf('Load')>-1){msg='api.supabase.com 连接不上，检查网络或换 Wi-Fi'}
+    setStatus('error','<strong>连接失败</strong>：'+msg);mode='local';bootstrapLocal()
+  }
+}
+function bootstrapLocal(){loadLocal();resetForm();renderAll()}
+
+// ============================================================
+// LOCAL
+// ============================================================
+const LS_STATE='travel_expense_v3';
+function loadLocal(){try{const raw=localStorage.getItem(LS_STATE);if(raw)state=JSON.parse(raw)}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS_STATE,JSON.stringify(state))}catch(e){}}
+
+// ============================================================
+// REMOTE
+// ============================================================
+async function loadRemote(){isFetching=true;const{data:memData,error:memErr}=await sb.from('members').select('*').eq('trip_id',TRIP_ID);if(memErr)throw new Error('members: '+memErr.message);const{data:expData,error:expErr}=await sb.from('expenses').select('*').eq('trip_id',TRIP_ID).order('date',{ascending:true});if(expErr)throw new Error('expenses: '+expErr.message);state.members=(memData||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));state.expenses=(expData||[]).map(r=>({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount)||0,participants:r.participants||[],weights:r.weights||{},images:r.images||[],note:r.note||''}));isFetching=false}
+function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'members',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe();sb.channel('exp-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'expenses',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe()}
+
+// ============================================================
+// CRUD
+// ============================================================
+async function addMemberRemote(name){const{data,error}=await sb.from('members').insert({trip_id:TRIP_ID,name}).select().single();if(error)throw error;return data}
+async function delMemberRemote(id){const m=state.members.find(x=>x.id===id);const n=m?m.name:'';if(n){await sb.from('expenses').delete().eq('trip_id',TRIP_ID).eq('payer',n);await sb.from('expenses').delete().eq('trip_id',TRIP_ID).contains('participants',[n])}await sb.from('members').delete().eq('id',id)}
+async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};const{data,error}=await sb.from('expenses').insert(row).select().single();if(error)throw error;return data}
+async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};const{error}=await sb.from('expenses').update(row).eq('id',id);if(error)throw error}
+async function delExpenseRemote(id){await sb.from('expenses').delete().eq('id',id)}
+
+// ============================================================
+// UI: Members modal
+// ============================================================
+function renderMemberModal(){const list=document.getElementById('memberList');list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:20px 0;text-align:center;font-size:13px">还没有成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.className='member-list-item';div.innerHTML=`<span class="name">${esc(m.name)}</span><button onclick="removeMember('${m.id}')">删除</button>`;list.appendChild(div)})}}
+function openMembersModal(){renderMemberModal();document.getElementById('membersModal').classList.add('open')}
+function closeMembersModal(){document.getElementById('membersModal').classList.remove('open')}
+async function addMember(){const inp=document.getElementById('newMemberInput');if(!inp)return;const name=inp.value.trim();if(!name)return;if(state.members.some(m=>m.name===name)){showToast('已有同名成员');return}if(mode==='remote'&&sb){try{const data=await addMemberRemote(name);state.members.push({id:data.id,name:data.name})}catch(e){showToast('添加失败:'+e.message);return}}else{state.members.push({id:uid(),name});saveLocal()}inp.value='';renderMemberModal();renderAll();setTimeout(()=>inp.focus(),30)}
+async function removeMember(id){const m=state.members.find(x=>x.id===id);if(!m)return;const used=state.expenses.some(e=>e.payer===m.name||(e.participants||[]).includes(m.name));if(!confirm(used?`成员「${m.name}」已在支出中出现，删除后相关支出也会被删除。继续？`:`删除「${m.name}」？`))return;if(mode==='remote'&&sb){try{await delMemberRemote(id)}catch(e){showToast('删除失败:'+e.message);return};state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name))}else{state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name));saveLocal()}if(getWhoami()===m.name){localStorage.removeItem(LS_WHOAMI);renderWhoamiBtn()}renderMemberModal();renderAll()}
+
+// ============================================================
+// UI: Categories modal
+// ============================================================
+function renderCategoryModal(){const cats=getCategories();const list=document.getElementById('catList');list.innerHTML='';cats.forEach(c=>{const div=document.createElement('div');div.className='cat-list-item';div.innerHTML=`<span class="name">${esc(c)}</span><button onclick="removeCategory('${esc(c)}')">删除</button>`;list.appendChild(div)});}
+function openCategoriesModal(){renderCategoryModal();document.getElementById('categoriesModal').classList.add('open')}
+function closeCategoriesModal(){document.getElementById('categoriesModal').classList.remove('open');renderForm()}
+function addCategory(){const inp=document.getElementById('newCatInput');if(!inp)return;const name=inp.value.trim();if(!name)return;const cats=getCategories();if(cats.includes(name)){showToast('已有同名类目');return}if(cats.length>=20){showToast('最多 20 个类目');return}cats.push(name);setCategories(cats);inp.value='';renderCategoryModal();renderForm()}
+function removeCategory(name){const cats=getCategories();if(cats.length<=1){showToast('至少保留一个类目');return}const idx=cats.indexOf(name);if(idx>=0)cats.splice(idx,1);setCategories(cats);renderCategoryModal();renderForm()}
+
+// ============================================================
+// UI: Whoami
+// ============================================================
+function renderWhoamiBtn(){const who=getWhoami();const btn=document.getElementById('whoamiBtn');if(who){btn.textContent='👤 我：'+who;btn.className='whoami-btn set'}else{btn.textContent='👤 未选择';btn.className='whoami-btn'}}
+function renderWhoamiModal(){const list=document.getElementById('whoamiList'),who=getWhoami();list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:10px 0;font-size:13px">请先添加成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.style.cssText='padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center';if(m.name===who)div.style.background='var(--good-soft)';div.innerHTML=`<span style="font-weight:600;font-size:14px">${esc(m.name)}</span>${m.name===who?'<span style="font-size:11px;color:var(--good)">✓ 当前</span>':''}`;div.onclick=()=>{setWhoami(m.name);closeWhoamiModal();resetForm()};list.appendChild(div)})}if(who){const clear=document.createElement('div');clear.style.cssText='padding:6px 10px;margin-top:6px;cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft)';clear.textContent='清除选择';clear.onclick=()=>{localStorage.removeItem(LS_WHOAMI);renderWhoamiBtn();closeWhoamiModal();resetForm()};list.appendChild(clear)}}
+function openWhoamiModal(){renderWhoamiModal();document.getElementById('whoamiModal').classList.add('open')}
+function closeWhoamiModal(){document.getElementById('whoamiModal').classList.remove('open')}
+
+// ============================================================
+// UI: Form
+// ============================================================
+function renderForm(){const sel=document.getElementById('f_payer'),who=getWhoami();sel.innerHTML=state.members.length===0?'<option value="">请先加成员</option>':state.members.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join("");if(editingId===null){if(who&&state.members.some(m=>m.name===who))sel.value=who;else if(state.members.length>0)sel.value=state.members[0].name}const catSel=document.getElementById('f_cat');const cats=getCategories();catSel.innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");if(editingId===null||!catSel.value)catSel.value=cats[0];const p=document.getElementById('f_participants');if(state.members.length===0){p.innerHTML='<span class="empty">请先加成员（点顶部👥）</span>';document.getElementById('participantsControl').style.display='none';document.getElementById('weightsToggle').style.display='none'}else{const prevChecked=Array.from(document.querySelectorAll('.check-pill.checked')).map(el=>el.dataset.name).filter(Boolean);p.innerHTML=state.members.map(m=>{const checked=prevChecked.includes(m.name)?'checked':'';return`<label class="check-pill ${checked}" data-name="${esc(m.name)}" onclick="togglePill(event)">${esc(m.name)}</label>`}).join("");document.getElementById('participantsControl').style.display='flex';document.getElementById('weightsToggle').style.display=''}renderWeightsPanel();renderImagePreviews();updateFormSummary()}
+function getSelParts(){return Array.from(document.querySelectorAll('.check-pill.checked')).map(el=>el.dataset.name).filter(Boolean)}
+function togglePill(e){let el=e.target;while(el&&!el.classList.contains('check-pill'))el=el.parentElement;if(!el)return;el.classList.toggle('checked');renderWeightsPanel();updateFormSummary()}
+function selAllParts(checked){document.querySelectorAll('.check-pill').forEach(el=>{if(checked)el.classList.add('checked');else el.classList.remove('checked')});renderWeightsPanel();updateFormSummary()}
+function updateFormSummary(){const amt=parseFloat(document.getElementById('f_amount').value)||0;const parts=getSelParts();const w=getCurrentWeights();const totalW=parts.reduce((s,n)=>s+(w[n]||1),0);const s=document.getElementById('formSummary');if(amt>0&&parts.length>0){const per=totalW>0?amt/totalW:0;s.innerHTML=`加权人均 <strong>${fmt(per)}</strong>（${parts.length} 人）`}else if(amt>0){s.innerHTML=`已填 <strong>${fmt(amt)}</strong>，请勾选参与人`}else{s.innerHTML=''}}
+
+// ============================================================
+// UI: Weights
+// ============================================================
+function toggleWeights(){const panel=document.getElementById('weightsPanel'),toggle=document.getElementById('weightsToggle');panel.classList.toggle('show');toggle.classList.toggle('open');if(panel.classList.contains('show'))renderWeightsPanel()}
+function renderWeightsPanel(){const panel=document.getElementById('weightsPanel'),parts=getSelParts(),w=getCurrentWeights();panel.innerHTML='';if(parts.length===0){panel.innerHTML='<div style="font-size:12px;color:var(--ink-soft)">先勾选参与人</div>';return}parts.forEach(name=>{const row=document.createElement('div');row.className='weight-row';row.innerHTML=`<span class="w-name">${esc(name)}</span>× <input type="number" value="${w[name]||1}" min="0.5" step="0.5" data-weight-name="${esc(name)}" oninput="onWeightChange()"> <span class="w-unit">份</span>`;panel.appendChild(row)})}
+function getCurrentWeights(){const w={};document.querySelectorAll('[data-weight-name]').forEach(el=>{const n=el.dataset.weightName,v=parseFloat(el.value)||1;if(v!==1)w[n]=v});return w}
+function onWeightChange(){updateFormSummary();renderWeightsPanel();document.getElementById('weightsPanel').classList.add('show');document.getElementById('weightsToggle').classList.add('open')}
+
+// ============================================================
+// UI: Images
+// ============================================================
+function renderImagePreviews(){const container=document.getElementById('f_images');const imgs=editingId!==null?(state.expenses.find(e=>e.id===editingId)?.images||[]):_tempImages;container.innerHTML=imgs.map((uri,i)=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"><span class="del-img" onclick="event.stopPropagation();removeImage(${i})">×</span></div>`).join("")}
+function onImagesSelected(input){const files=input.files;if(!files||files.length===0)return;const imgs=editingId!==null?(state.expenses.find(e=>e.id===editingId)?.images||[]):_tempImages;if(imgs.length+files.length>5){showToast('最多 5 张图片');input.value='';return}let i=0;const reader=new FileReader();reader.onload=function(e){imgs.push(e.target.result);i++;if(i<files.length){readNext()}else{renderImagePreviews();input.value=''}};function readNext(){reader.readAsDataURL(files[i])}readNext()}
+function removeImage(idx){const imgs=editingId!==null?(state.expenses.find(e=>e.id===editingId)?.images||[]):_tempImages;imgs.splice(idx,1);renderImagePreviews()}
+function openLightbox(uri){document.getElementById('lightboxImg').src=uri;document.getElementById('lightbox').classList.add('open')}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
+function getCurrentImages(){return editingId!==null?(state.expenses.find(e=>e.id===editingId)?.images||[]):_tempImages}
+
+// ============================================================
+// UI: Form submit
+// ============================================================
+async function submitExpense(){const date=document.getElementById('f_date').value,cat=document.getElementById('f_cat').value,desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,amount=parseFloat(document.getElementById('f_amount').value),note=document.getElementById('f_note').value.trim(),parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();if(!date){showToast('请选择日期');return}if(!desc){showToast('请填写项目说明');return}if(!payer){showToast('请选择付款人');return}if(!amount||amount<=0){showToast('请填写金额');return}if(parts.length===0){showToast('请至少勾选一个参与人');return}const cleanWeights={};for(const n of parts){const v=weights[n]||1;if(v!==1)cleanWeights[n]=v}const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,note};if(mode==='remote'&&sb){try{if(editingId!==null){await updateExpenseRemote(editingId,payload);const idx=state.expenses.findIndex(e=>e.id===editingId);if(idx>=0)Object.assign(state.expenses[idx],payload)}else{const data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}}catch(e){showToast('保存失败:'+e.message);return}}else{if(editingId!==null){const e=state.expenses.find(x=>x.id===editingId);if(e)Object.assign(e,payload)}else{state.expenses.push({id:uid(),...payload})}saveLocal()}_tempImages=[];editingId=null;resetForm();renderAll()}
+function resetForm(){document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';const catSel=document.getElementById('f_cat');const cats=getCategories();catSel.value=cats[0];const who=getWhoami(),sel=document.getElementById('f_payer');if(who&&state.members.some(m=>m.name===who))sel.value=who;else if(state.members.length>0)sel.value=state.members[0].name;document.querySelectorAll('.check-pill').forEach(el=>el.classList.remove('checked'));document.getElementById('weightsPanel').classList.remove('show');document.getElementById('weightsToggle').classList.remove('open');_tempImages=[];renderImagePreviews();document.getElementById('submitBtn').textContent='＋ 添加这笔';document.getElementById('cancelBtn').style.display='none';document.getElementById('formMode').textContent='新增';editingId=null;renderWeightsPanel();updateFormSummary()}
+function editExpense(id){const e=state.expenses.find(x=>x.id===id);if(!e)return;editingId=id;document.getElementById('f_date').value=e.date;document.getElementById('f_cat').value=e.category;document.getElementById('f_desc').value=e.desc;document.getElementById('f_payer').value=e.payer;document.getElementById('f_amount').value=e.amount;document.getElementById('f_note').value=e.note||'';renderForm();document.querySelectorAll('.check-pill').forEach(el=>{const n=el.dataset.name;if((e.participants||[]).includes(n))el.classList.add('checked');else el.classList.remove('checked')});renderWeightsPanel();document.querySelectorAll('[data-weight-name]').forEach(el=>{const n=el.dataset.weightName;el.value=(e.weights&&e.weights[n])||1});if(e.weights&&Object.keys(e.weights).some(k=>(e.weights[k]||1)!==1)){document.getElementById('weightsPanel').classList.add('show');document.getElementById('weightsToggle').classList.add('open')}_tempImages=[...(e.images||[])];renderImagePreviews();document.getElementById('submitBtn').textContent='✓ 保存修改';document.getElementById('cancelBtn').style.display='inline-block';document.getElementById('formMode').textContent='编辑中';updateFormSummary();document.querySelector('.card.highlight').scrollIntoView({behavior:'smooth',block:'start'})}
+function cancelEdit(){_tempImages=[];editingId=null;resetForm();renderAll()}
+async function deleteExpense(id){if(!confirm('确认删除？'))return;if(mode==='remote'&&sb){try{await delExpenseRemote(id)}catch(e){showToast('删除失败:'+e.message);return};state.expenses=state.expenses.filter(x=>x.id!==id)}else{state.expenses=state.expenses.filter(x=>x.id!==id);saveLocal()}if(editingId===id){_tempImages=[];editingId=null;resetForm()}renderAll()}
+
+// ============================================================
+// UI: Expense List
+// ============================================================
+function renderExpenseList(){const body=document.getElementById('expenseBody'),cards=document.getElementById('expenseCards');body.innerHTML='';cards.innerHTML='';if(state.expenses.length===0){body.innerHTML='<tr class="empty-row"><td colspan="7">还没有任何支出。</td></tr>';cards.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:24px 0;font-size:13px;font-style:italic">还没有任何支出</div>'}else{const sorted=[...state.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''));sorted.forEach(e=>{const tr=document.createElement('tr');if(e.id===editingId)tr.className='editing';const partsArr=e.participants||[],w=e.weights||{},hasNonOne=Object.keys(w).some(k=>(w[k]||1)!==1),partsText=hasNonOne?partsArr.map(n=>esc(n)+(w[n]&&w[n]!==1?`(×${w[n]})`:'')).join('、'):(partsArr.length===state.members.length&&state.members.length>0?`全员(${partsArr.length})`:partsArr.map(n=>n===e.payer?'<span class="me">'+esc(n)+'</span>':esc(n)).join('、')),imgTag=(e.images||[]).length>0?`<span class="img-indicator" onclick="openLightbox('${esc(e.images[0])}')">📷${e.images.length}</span>`:'';tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="editExpense('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;body.appendChild(tr);const card=document.createElement('div');card.className='exp-card';const pNames=partsArr.map(n=>n===e.payer?'<span class="me">'+esc(n)+'</span>':esc(n)).join('、');const imgsHTML=(e.images||[]).length>0?`<div class="ec-imgs">${e.images.map((uri,i)=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')}</div>`:'';card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${imgsHTML}<div class="ec-actions"><button onclick="editExpense(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card)})}document.getElementById('listBadge').textContent=`${state.expenses.length} 笔`;document.getElementById('listTotal').textContent=`合计 ${fmt(state.expenses.reduce((s,e)=>s+e.amount,0))}`}
+
+// ============================================================
+// Summary, Category, Settlement
+// ============================================================
+function computeBalances(){const bal={};state.members.forEach(m=>bal[m.name]={paid:0,owe:0});state.expenses.forEach(e=>{if(!bal[e.payer])bal[e.payer]={paid:0,owe:0};(e.participants||[]).forEach(p=>{if(!bal[p])bal[p]={paid:0,owe:0}})});state.expenses.forEach(e=>{bal[e.payer].paid+=e.amount;const parts=e.participants||[],w=e.weights||{},totalW=parts.reduce((s,n)=>s+(w[n]||1),0);parts.forEach(p=>{bal[p].owe+=totalW>0?r2(e.amount*(w[p]||1)/totalW):0})});Object.keys(bal).forEach(k=>{bal[k].paid=r2(bal[k].paid);bal[k].owe=r2(bal[k].owe);bal[k].net=r2(bal[k].paid-bal[k].owe)});return bal}
+function renderSummary(){const grid=document.getElementById('netGrid');grid.innerHTML='';if(state.members.length===0){grid.innerHTML='<div class="hint" style="grid-column:1/-1">先添加成员。</div>';document.getElementById('netCheck').textContent='';return}const bal=computeBalances(),allNames=new Set([...state.members.map(m=>m.name),...Object.keys(bal)]);allNames.forEach(name=>{const b=bal[name],cls=b.net>0.005?'positive':(b.net<-0.005?'negative':'zero'),tag=b.net>0.005?'应收':(b.net<-0.005?'应付':'已结清'),div=document.createElement('div');div.className='net-chip '+cls;div.innerHTML=`<span class="name">${esc(name)}</span><div class="row"><span>已付</span><span>${fmt(b.paid)}</span></div><div class="row"><span>应付</span><span>${fmt(b.owe)}</span></div><span class="net">${fmt(b.net)}</span><span class="tag">${tag}</span>`;grid.appendChild(div)});const sum=Object.values(bal).reduce((s,b)=>s+b.net,0),check=document.getElementById('netCheck');if(Math.abs(sum)>0.5){check.innerHTML='⚠ 净额合计≠0，数据可能不一致';check.style.color='var(--bad)'}else{check.innerHTML='✓ 数据自洽';check.style.color='var(--good)'}}
+
+function toggleCategoryAnalysis(){const body=document.getElementById('catBars'),header=document.getElementById('catHeader');if(body.style.display==='none'){body.style.display='flex';header.textContent='▾ 分类分析';renderCategory()}else{body.style.display='none';header.textContent='▸ 分类分析'}}
+function renderCategory(){const cats=getCategories(),totals={};cats.forEach(c=>totals[c]=0);state.expenses.forEach(e=>{if(totals[e.category]!==undefined)totals[e.category]+=e.amount});const grand=cats.reduce((s,c)=>s+totals[c],0),container=document.getElementById('catBars');container.innerHTML='';cats.forEach(c=>{const t=totals[c],pct=grand>0?(t/grand*100):0,row=document.createElement('div');row.className='cat-bar-row';row.innerHTML=`<div>${c}</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div><div class="amt">${fmt(t)}</div><div class="pct">${pct.toFixed(1)}%</div>`;container.appendChild(row)});if(grand===0)container.innerHTML='<div class="hint">还没有支出数据。</div>'}
+
+function settle(){const bal=computeBalances(),arr=Object.entries(bal).map(([name,b])=>({name,amount:b.net})).filter(b=>Math.abs(b.amount)>0.005);const transfers=[];let safety=100;while(safety-- >0){let maxIdx=-1,minIdx=-1,maxVal=0,minVal=0;for(let i=0;i<arr.length;i++){if(arr[i].amount>0.005&&arr[i].amount>maxVal){maxVal=arr[i].amount;maxIdx=i}if(arr[i].amount<-0.005&&arr[i].amount<minVal){minVal=arr[i].amount;minIdx=i}}if(maxIdx===-1||minIdx===-1)break;const t=Math.min(Math.abs(maxVal),Math.abs(minVal));transfers.push({from:arr[minIdx].name,to:arr[maxIdx].name,amount:r2(t)});arr[maxIdx].amount=r2(arr[maxIdx].amount-t);arr[minIdx].amount=r2(arr[minIdx].amount+t)}return transfers}
+
+function openSettlementModal(){const body=document.getElementById('settlementBody');if(state.expenses.length===0||state.members.length===0){body.innerHTML='<div class="result-empty">还没有数据。先录入支出。</div>'}else{const transfers=settle(),total=transfers.reduce((s,t)=>s+t.amount,0),bal=computeBalances(),npeople=Object.values(bal).filter(b=>Math.abs(b.net)>0.005).length;let html=`<div class="result-summary"><div class="stat"><div class="label">转账笔数</div><div class="value">${transfers.length} 笔</div></div><div class="stat"><div class="label">流转总额</div><div class="value">${fmt(total)}</div></div><div class="stat"><div class="label">参与人数</div><div class="value">${npeople} 人</div></div></div><div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">算法：每次取最大应收方配对最大应付方，最多 n−1 笔</div>`;if(transfers.length===0){html+='<div class="result-empty">全部已结清</div>'}else{transfers.forEach((t,i)=>{html+=`<div class="settle-transfer-item"><span class="idx">${i+1}</span><span class="who"><span class="name-pill from">${esc(t.from)}</span><span class="arrow">→</span><span class="name-pill to">${esc(t.to)}</span></span><span class="amount">${fmt(t.amount)}</span></div>`})}body.innerHTML=html}document.getElementById('settlementModal').classList.add('open')}
+function closeSettlementModal(){document.getElementById('settlementModal').classList.remove('open')}
+
+// ============================================================
+// Reset (hidden in settlement footer, password-protected)
+// ============================================================
+function showResetPrompt(){ document.getElementById('resetLink').style.display='none';document.getElementById('resetPrompt').style.display='inline';setTimeout(()=>document.getElementById('resetPwd').focus(),100) }
+function hideResetPrompt(){ document.getElementById('resetLink').style.display='';document.getElementById('resetPrompt').style.display='none';document.getElementById('resetPwd').value='' }
+async function confirmReset(){
+  const pwd=document.getElementById('resetPwd').value;
+  if(pwd!=='1234'){showToast('密码错误');document.getElementById('resetPwd').value='';return}
+  if(!confirm('⚠️ 将清空本出行的所有成员和支出数据。此操作不可撤销。确定？')){hideResetPrompt();return}
+  if(mode==='remote'&&sb){
+    try{
+      await sb.from('expenses').delete().eq('trip_id',TRIP_ID);
+      await sb.from('members').delete().eq('trip_id',TRIP_ID);
+    }catch(e){showToast('清空失败:'+e.message);hideResetPrompt();return}
+    state={members:[],expenses:[]};
+  }else{
+    state={members:[],expenses:[]};saveLocal();
+  }
+  _tempImages=[];editingId=null;hideResetPrompt();closeSettlementModal();
+  resetForm();renderAll();showToast('✓ 已清空，下次出行可以再用');
+}
+
+async function copySettlement(){if(state.expenses.length===0){showToast('暂无数据');return}const bal=computeBalances(),transfers=settle(),lines=['【出行费用结算清单】',''];Object.entries(bal).forEach(([name,b])=>{if(b.net>0.005)lines.push(name+'：应收 ¥'+b.net.toFixed(2));else if(b.net<-0.005)lines.push(name+'：应付 ¥'+(-b.net).toFixed(2))});lines.push('','—— 转账方案 ——');transfers.forEach((t,i)=>lines.push((i+1)+'. '+t.from+' → '+t.to+'：¥'+t.amount.toFixed(2)));lines.push('','共 '+transfers.length+' 笔');try{await navigator.clipboard.writeText(lines.join('\n'));showToast('✓ 已复制，可粘到微信群')}catch(e){prompt('复制失败，请手动选择：',lines.join('\n'))}}
+
+// ============================================================
+// Sample
+// ============================================================
+async function loadSampleRemote(){if(state.expenses.length>0||state.members.length>0){if(!confirm('已有数据，载入示例会追加。继续？'))return}const members=['张三','李四','王五','赵六','陈七'];const expenses=[{date:'2026-07-01',category:'交通',desc:'机场打车',payer:'张三',amount:120,participants:members,weights:{},images:[],note:''},{date:'2026-07-01',category:'住宿',desc:'两晚酒店',payer:'李四',amount:2400,participants:members,weights:{},images:[],note:'2间×2晚'},{date:'2026-07-01',category:'餐饮',desc:'到达晚餐',payer:'王五',amount:680,participants:members,weights:{},images:[],note:''},{date:'2026-07-02',category:'门票',desc:'景区门票',payer:'赵六',amount:750,participants:members,weights:{},images:[],note:''},{date:'2026-07-02',category:'餐饮',desc:'午餐',payer:'陈七',amount:430,participants:members,weights:{},images:[],note:''},{date:'2026-07-02',category:'购物',desc:'特产',payer:'张三',amount:300,participants:['张三'],weights:{},images:[],note:'自付'},{date:'2026-07-02',category:'餐饮',desc:'烧烤',payer:'李四',amount:260,participants:['张三','李四','王五'],weights:{'王五':2},images:[],note:''},{date:'2026-07-03',category:'交通',desc:'返程打车',payer:'王五',amount:340,participants:members,weights:{},images:[],note:''}];if(mode==='remote'&&sb){try{const{data:memData,error:memErr}=await sb.from('members').insert(members.map(name=>({trip_id:TRIP_ID,name}))).select();if(memErr)throw memErr;memData.forEach(m=>state.members.push({id:m.id,name:m.name}));const{data:expData,error:expErr}=await sb.from('expenses').insert(expenses.map(e=>({trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights,images:e.images,note:e.note}))).select();if(expErr)throw expErr;expData.forEach(r=>state.expenses.push({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount),participants:r.participants||[],weights:r.weights||{},images:r.images||[],note:r.note||''}));renderAll();showToast('已添加示例数据')}catch(e){showToast('添加失败:'+e.message)}}else{members.forEach(n=>state.members.push({id:uid(),name:n}));expenses.forEach(e=>state.expenses.push({id:uid(),...e}));saveLocal();renderAll();showToast('已添加示例数据')}}
+
+// ============================================================
+// Render all
+// ============================================================
+function renderAll(){renderForm();renderExpenseList();renderSummary();if(document.getElementById('catBars').style.display!=='none')renderCategory()}
+
+// ============================================================
+// Config / Share
+// ============================================================
+function openConfigModal(){const cfg=getConfig();document.getElementById('cfg_url').value=cfg.url;document.getElementById('cfg_key').value=cfg.key;document.getElementById('cfg_trip').value=cfg.trip||'';document.getElementById('configModal').classList.add('open')}
+function closeConfigModal(){document.getElementById('configModal').classList.remove('open')}
+function saveConfig(){const url=document.getElementById('cfg_url').value.trim(),key=document.getElementById('cfg_key').value.trim();let trip=document.getElementById('cfg_trip').value.trim();if(!url||!key){showToast('请填写URL和Key');return}if(!trip){trip='trip-'+Math.random().toString(36).slice(2,8)}localStorage.setItem(LS_KEYS.url,url);localStorage.setItem(LS_KEYS.key,key);localStorage.setItem(LS_KEYS.trip,trip);closeConfigModal();showToast('配置已保存，正在连接...');setTimeout(()=>location.reload(),800)}
+function useLocalMode(){closeConfigModal();localStorage.removeItem(LS_KEYS.url);localStorage.removeItem(LS_KEYS.key);localStorage.removeItem(LS_KEYS.trip);showToast('切换到本地模式');setTimeout(()=>location.reload(),600)}
+function openShareModal(){if(mode!=='remote'){showToast('请先配置Supabase');return}document.getElementById('shareUrl').value=location.href;document.getElementById('shareModal').classList.add('open')}
+function closeShareModal(){document.getElementById('shareModal').classList.remove('open')}
+async function copyShareLink(){try{await navigator.clipboard.writeText(document.getElementById('shareUrl').value);showToast('✓ 已复制')}catch(e){document.getElementById('shareUrl').select();document.execCommand('copy');showToast('已复制')}}
+
+// ============================================================
+// INIT
+// ============================================================
+document.getElementById('f_amount').addEventListener('input',updateFormSummary);
+renderWhoamiBtn();initConnection();
+setTimeout(()=>{if(state.members.length>0&&!getWhoami())openWhoamiModal()},1500);
+</script>
+</body>
+</html>

@@ -159,6 +159,17 @@
   .cat-popup{position:absolute;top:100%;right:0;margin-top:4px;background:var(--card);border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:280px;max-width:360px;padding:12px 14px}
   .cat-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .cat-popup-head span{font-weight:600;font-size:13px;color:var(--brand)}
+  .detail-popup{position:absolute;left:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;min-width:260px;max-width:340px;padding:10px 12px;display:none}
+  .detail-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .detail-popup-head span{font-weight:600;font-size:12px;color:var(--brand)}
+  .detail-popup-close{background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink-soft);padding:0;line-height:1}
+  .detail-popup .de-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .detail-popup .de-row:last-child{border-bottom:none}
+  .detail-popup .de-desc{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+  .detail-popup .de-amt{font-weight:600;color:var(--brand);white-space:nowrap}
+  .detail-popup .de-empty{font-size:12px;color:var(--ink-soft);text-align:center;padding:8px 0}
+  .clickable-amt{cursor:pointer;border-bottom:1px dashed;transition:all .15s}
+  .clickable-amt:hover{opacity:.75}
   .cat-popup-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);padding:0;line-height:1}
   .modal-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
   .modal-mask.open{display:flex}
@@ -248,10 +259,10 @@
 </div>
 
 <div class="container">
-  <header><div><h1>出行费用分摊</h1><div class="sub">表单录入 · 拍照凭证 · 实时协作 · 自动结算</div></div></header>
+  <header><div><h1>出行费用分摊</h1></div></header>
 
   <!-- 1. Form -->
-  <div class="card highlight">
+  <div class="card highlight" onfocusin="ensureWhoami(true)">
     <h2><span class="num">1</span> 录入支出 <span class="badge" id="formMode">新增</span></h2>
     <div class="form-grid">
       <div class="form-field"><label>日期</label><input type="date" id="f_date"></div>
@@ -259,7 +270,7 @@
       <div class="form-field"><label>付款人</label><select id="f_payer"></select></div>
       <div class="form-field"><label>金额（¥）</label><input type="number" id="f_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
       <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="比如：机场打车、两晚酒店"></div>
-      <div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
+      <div class="form-field full"><label>📍 定位（可选）</label><div style="display:flex;align-items:center;gap:8px"><button type="button" id="f_locBtn" onclick="getLocation('f_location','f_locDisplay','f_locBtn')" style="background:#fff;border:1px solid var(--brand);color:var(--brand);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0">📍 获取定位</button><input type="hidden" id="f_location"><span id="f_locDisplay" style="font-size:13px;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div></div><div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
       <div class="form-field full"><div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none"><span class="arrow">▸</span> 高级：自定义分摊份数</div><div class="weights-panel" id="weightsPanel"></div></div>
       <div class="form-field full"><label>备注</label><input type="text" id="f_note" placeholder="比如：2间×2晚"></div>
       <div class="form-field full"><label>付款凭证（拍照，最多5张）</label><div class="images-preview" id="f_images"></div><label class="add-img-btn" for="imgInput">📷 添加图片</label><input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)"></div>
@@ -275,14 +286,13 @@
   <div class="card">
     <h2><span class="num">2</span> 已录支出 <span class="badge" id="listBadge">0 笔</span></h2>
     <div class="list-header" style="position:relative"><span>实时同步中 · 多人可同时编辑</span><span class="total clickable" id="listTotal" onclick="openCategoryPopup(event)" title="点击查看分类统计">合计 ¥0.00</span></div>
-    <table class="desktop"><thead><tr><th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明</th><th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th><th style="width:120px">参与人</th><th style="width:86px">操作</th></tr></thead><tbody id="expenseBody"></tbody></table>
+    <table class="desktop"><thead><tr><th style="width:80px">日期</th><th style="width:52px">类目</th><th>说明 / 定位</th><th style="width:66px">付款人</th><th class="num" style="width:76px">金额</th><th style="width:120px">参与人</th><th style="width:86px">操作</th></tr></thead><tbody id="expenseBody"></tbody></table>
     <div class="expense-cards-mobile" id="expenseCards"></div>
   </div>
 
   <!-- Category popup -->
 <div class="cat-popup" id="catPopup" style="display:none"><div class="cat-popup-head"><span>分类统计</span><button class="cat-popup-close" onclick="closeCategoryPopup()">×</button></div><div class="cat-bars" id="catPopupBars"></div></div>
 
-<footer>数据通过 Supabase 实时同步 · 类目/成员自由编辑 · 仅录入人可编辑删除</footer>
 </div>
 
 <!-- ===== Members modal ===== -->
@@ -301,7 +311,7 @@
 <div class="modal-mask" id="shareModal"><div class="modal"><div class="modal-header"><h2>分享给朋友</h2><button class="close" onclick="closeShareModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">朋友点开看到同一份数据，实时同步。</p><label>共享链接</label><input type="text" id="shareUrl" readonly onclick="this.select()"><div class="modal-help">不要发到公共场合。</div></div><div class="modal-footer"><button class="primary" onclick="copyShareLink()">📋 复制链接</button></div></div></div>
 
 <!-- ===== Settlement modal ===== -->
-<div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px"><div style="font-size:11px;color:var(--ink-soft)"><div><span id="resetLink" style="cursor:pointer;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='.5'" onclick="showResetPrompt()">结束本次出行 · 清空数据</span><span id="resetPrompt" style="display:none;margin-left:8px">密码 <input type="password" id="resetPwd" maxlength="6" style="width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit" onkeydown="if(event.key==='Enter')confirmReset()"> <button onclick="confirmReset()" style="background:var(--bad);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit">确认</button> <button onclick="hideResetPrompt()" style="background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 4px">取消</button></span></div><div style="margin-top:4px"><span style="cursor:pointer;opacity:0;font-size:10px" onclick="openSettingsModal()">修改 Supabase 配置</span></div></div><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
+<div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:flex-end;align-items:center;gap:8px"><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
 
 <!-- ===== Edit modal (separate from form) ===== -->
 <div class="modal-mask" id="editModal"><div class="modal wide"><div class="modal-header"><h2>✏ 编辑支出</h2><button class="close" onclick="closeEditModal()">×</button></div><div class="modal-body">
@@ -311,7 +321,7 @@
     <div class="form-field"><label>付款人</label><select id="e_payer"></select></div>
     <div class="form-field"><label>金额（¥）</label><input type="number" id="e_amount" step="0.01" min="0" inputmode="decimal"></div>
     <div class="form-field full"><label>说明</label><input type="text" id="e_desc"></div>
-    <div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
+    <div class="form-field full"><label>📍 定位（可选）</label><div style="display:flex;align-items:center;gap:8px"><button type="button" id="e_locBtn" onclick="getLocation('e_location','e_locDisplay','e_locBtn')" style="background:#fff;border:1px solid var(--brand);color:var(--brand);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0">📍 获取定位</button><input type="hidden" id="e_location"><span id="e_locDisplay" style="font-size:13px;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div></div><div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
     <div class="form-field full"><div class="weights-toggle" id="e_weightsToggle" onclick="toggleEditWeights()"><span class="arrow">▸</span> 自定义分摊份数</div><div class="weights-panel" id="e_weightsPanel"></div></div>
     <div class="form-field full"><label>备注</label><input type="text" id="e_note"></div>
     <div class="form-field full"><label>付款凭证</label><div class="images-preview" id="e_images"></div><label class="add-img-btn" for="e_imgInput">📷 添加图片</label><input type="file" id="e_imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
@@ -332,7 +342,7 @@ const HARDCODED = {
   key: 'sb_publishable_uaQM9RJ06PXKC8v4BlqAhA_TK__m3pK',
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
-const LS_WHOAMI='whoami',LS_CATS='custom_categories',SUPER_PWD='1234';
+const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=4*60*60*1000;
 let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false;
 let state={members:[],expenses:[]};
 let editingId=null,isFetching=false,_tempImages=[],_editImages=[];
@@ -344,8 +354,37 @@ function r2(x){return Math.round(x*100)/100}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
-function getWhoami(){return localStorage.getItem(LS_WHOAMI)||''}
-function setWhoami(name){localStorage.setItem(LS_WHOAMI,name);renderWhoamiBtn();resetForm()}
+function getLocation(hiddenId,displayId,btnId){
+  const btn=document.getElementById(btnId);
+  btn.disabled=true;btn.textContent='定位中...';
+  if(!navigator.geolocation){btn.textContent='不支持定位';btn.disabled=false;showToast('浏览器不支持定位');return}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const coords=`${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`;
+      document.getElementById(hiddenId).value=coords;
+      // Reverse geocode: try to get a readable name
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=16`)
+        .then(r=>r.json()).then(data=>{
+          const name=data.display_name?data.display_name.split(',').slice(0,3).join('·'):coords;
+          document.getElementById(hiddenId).value=name;
+          document.getElementById(displayId).textContent=name;
+        }).catch(()=>{
+          document.getElementById(displayId).textContent=coords;
+        });
+      btn.textContent='已定位 ✓';btn.disabled=false;
+      setTimeout(()=>{if(document.getElementById(displayId).textContent){btn.textContent='📍 重新定位'}},3000)
+    },
+    err=>{
+      btn.textContent='📍 获取定位';btn.disabled=false;
+      if(err.code===1)showToast('定位权限被拒绝，请在浏览器设置中允许');
+      else showToast('定位失败，请检查网络');
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
+  )
+}
+function getWhoami(){const ts=parseInt(localStorage.getItem(LS_WHOAMI_TS)||'0');if(ts&&Date.now()-ts>MAX_WHOAMI_AGE){clearWhoami();return''}return localStorage.getItem(LS_WHOAMI)||''}
+function clearWhoami(){localStorage.removeItem(LS_WHOAMI);localStorage.removeItem(LS_WHOAMI_TS);renderWhoamiBtn()}
+function setWhoami(name){localStorage.setItem(LS_WHOAMI,name);localStorage.setItem(LS_WHOAMI_TS,Date.now());renderWhoamiBtn();resetForm()}
 function getCategories(){try{const raw=localStorage.getItem(LS_CATS);return raw?JSON.parse(raw):[...DEFAULT_CATS]}catch(e){return[...DEFAULT_CATS]}}
 function setCategories(arr){localStorage.setItem(LS_CATS,JSON.stringify(arr))}
 
@@ -357,6 +396,11 @@ function canEditOrDelete(expense){
   if(expense.created_by===who)return true;
   if(_superOK)return true;
   return false;
+}
+function ensureWhoami(silent){if(!getWhoami()){if(!silent)showToast('请先选择"我是谁"');openWhoamiModal();return false}return true}
+function checkEditDeleteAccess(expense){
+  if(!getWhoami()){showToast('请先在顶部设置"我是谁"');openWhoamiModal();return false}
+  return true;
 }
 function promptSuperPassword(actionFn,expense){
   const pwd=prompt('此支出由「'+esc(expense.created_by||'未知')+'」录入。仅录入人可编辑/删除。\n输入管理员密码可跨用户操作：');
@@ -384,7 +428,7 @@ function bootstrapLocal(){loadLocal();resetForm();renderAll()}
 // ============================================================
 // REMOTE
 // ============================================================
-async function loadRemote(){isFetching=true;const{data:memData,error:memErr}=await sb.from('members').select('*').eq('trip_id',TRIP_ID);if(memErr)throw new Error('members: '+memErr.message);const{data:expData,error:expErr}=await sb.from('expenses').select('*').eq('trip_id',TRIP_ID).order('date',{ascending:true});if(expErr)throw new Error('expenses: '+expErr.message);state.members=(memData||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));state.expenses=(expData||[]).map(r=>({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount)||0,participants:r.participants||[],weights:r.weights||{},images:r.images||[],created_by:r.created_by||r.payer||'',note:r.note||''}));isFetching=false}
+async function loadRemote(){isFetching=true;const{data:memData,error:memErr}=await sb.from('members').select('*').eq('trip_id',TRIP_ID);if(memErr)throw new Error('members: '+memErr.message);const{data:expData,error:expErr}=await sb.from('expenses').select('*').eq('trip_id',TRIP_ID).order('date',{ascending:true});if(expErr)throw new Error('expenses: '+expErr.message);state.members=(memData||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));state.expenses=(expData||[]).map(r=>({id:r.id,date:r.date,category:r.category,desc:r.description||'',payer:r.payer,amount:parseFloat(r.amount)||0,participants:r.participants||[],weights:r.weights||{},images:r.images||[],created_by:r.created_by||r.payer||'',note:r.note||'',location:r.location||''}));isFetching=false}
 function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'members',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe();sb.channel('exp-'+TRIP_ID).on('postgres_changes',{event:'*',schema:'public',table:'expenses',filter:`trip_id=eq.${TRIP_ID}`},async()=>{if(isFetching)return;await loadRemote();renderAll()}).subscribe()}
 
 // ============================================================
@@ -392,8 +436,8 @@ function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{eve
 // ============================================================
 async function addMemberRemote(name){const{data,error}=await sb.from('members').insert({trip_id:TRIP_ID,name}).select().single();if(error)throw error;return data}
 async function delMemberRemote(id){const m=state.members.find(x=>x.id===id);const n=m?m.name:'';if(n){await sb.from('expenses').delete().eq('trip_id',TRIP_ID).eq('payer',n);await sb.from('expenses').delete().eq('trip_id',TRIP_ID).contains('participants',[n])}await sb.from('members').delete().eq('id',id)}
-async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
-async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
+async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||'',location:e.location||''};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
+async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||'',location:e.location||''};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
 async function delExpenseRemote(id){await sb.from('expenses').delete().eq('id',id)}
 
 // ============================================================
@@ -404,20 +448,45 @@ function renderMemberModal(){
   const netEl=document.getElementById('netInModal');
   list.innerHTML='';
   if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:20px 0;text-align:center;font-size:13px">还没有成员</div>'}
-  else{state.members.forEach(m=>{
-    const div=document.createElement('div');div.className='member-list-item';
-    const delBtn=_adminDelete?`<button onclick="removeMember('${m.id}')">删除</button>`:'';
-    div.innerHTML=`<span class="name">${esc(m.name)}</span>${delBtn}`;
-    list.appendChild(div)
-  })}
 
-  // render net in modal
-  renderNetInModal(netEl);
+  // compute balances for inline display
+  var bal=null;
+  if(state.members.length>0&&state.expenses.length>0){bal=computeBalances()}
+
+  if(state.members.length>0){
+    state.members.forEach(m=>{
+      const div=document.createElement('div');div.className='member-list-item';
+      const delBtn=_adminDelete?`<button onclick="removeMember('${m.id}')">删除</button>`:'';
+      var balHtml='';
+      if(bal&&bal[m.name]){
+        const b=bal[m.name],cls=b.net>0.005?'positive':(b.net<-0.005?'negative':'zero'),tag=b.net>0.005?'应收':(b.net<-0.005?'应付':'已结清');
+        balHtml=`<span style="font-size:11px;color:var(--ink-soft);margin-left:4px;position:relative">已实付 <span class="clickable-amt" style="color:var(--good)" onclick="openDetailPopup(event,'paid','${esc(m.name)}')">${fmt(b.paid)}</span> / 应分摊 <span class="clickable-amt" style="color:var(--bad)" onclick="openDetailPopup(event,'owe','${esc(m.name)}')">${fmt(b.owe)}</span> <span style="color:${b.net>0.005?'var(--good)':(b.net<-0.005?'var(--bad)':'inherit')};font-weight:600">${fmt(b.net)} ${tag}</span><span class="detail-popup" id="dePop_${esc(m.name)}"></span></span>`;
+      }
+      div.innerHTML=`<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px"><span class="name">${esc(m.name)}</span>${balHtml}${delBtn}</div>`;
+      list.appendChild(div)
+    });
+  }
+
+  // consistency check only
+  if(netEl){
+    netEl.innerHTML='';
+    if(bal){
+      const sum=Object.values(bal).reduce((s,b)=>s+b.net,0);
+      netEl.innerHTML=Math.abs(sum)>0.10
+        ?'<div style="font-size:10px;color:var(--bad);margin-top:4px;cursor:pointer;text-decoration:underline" onclick="showConsistencyDetail(event)">⚠ 数据不一致（点此查看原因）</div>'
+        :'<div style="font-size:10px;color:var(--good);margin-top:4px">✓ 数据自洽</div>';
+    }
+  }
+
+  // admin status indicator
+  var adminHint=document.getElementById('adminStatusHint');
+  if(!adminHint){adminHint=document.createElement('div');adminHint.id='adminStatusHint';adminHint.style.cssText='font-size:10px;color:var(--ink-soft);text-align:center;margin-top:6px';netEl&&netEl.parentNode?netEl.parentNode.insertBefore(adminHint,netEl):null}
+  if(adminHint)adminHint.textContent=_adminDelete?'🔓 管理权限已启用':'';
 }
 function openMembersModal(){renderMemberModal();document.getElementById('membersModal').classList.add('open')}
 function closeMembersModal(){document.getElementById('membersModal').classList.remove('open')}
 async function addMember(){const inp=document.getElementById('newMemberInput');if(!inp)return;const name=inp.value.trim();if(!name)return;if(state.members.some(m=>m.name===name)){showToast('已有同名成员');return}if(mode==='remote'&&sb){try{const data=await addMemberRemote(name);state.members.push({id:data.id,name:data.name})}catch(e){showToast('添加失败:'+e.message);return}}else{state.members.push({id:uid(),name});saveLocal()}inp.value='';renderMemberModal();renderAll();setTimeout(()=>inp.focus(),30)}
-async function removeMember(id){const m=state.members.find(x=>x.id===id);if(!m)return;const used=state.expenses.some(e=>e.payer===m.name||(e.participants||[]).includes(m.name));if(!confirm(used?`成员「${m.name}」已在支出中出现，删除后相关支出也会删除。继续？`:`删除「${m.name}」？`))return;if(mode==='remote'&&sb){try{await delMemberRemote(id)}catch(e){showToast('删除失败:'+e.message);return};state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name))}else{state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name));saveLocal()}if(getWhoami()===m.name){localStorage.removeItem(LS_WHOAMI);renderWhoamiBtn()}renderAll();renderMemberModal()}
+async function removeMember(id){const m=state.members.find(x=>x.id===id);if(!m)return;const used=state.expenses.some(e=>e.payer===m.name||(e.participants||[]).includes(m.name));if(!confirm(used?`成员「${m.name}」已在支出中出现，删除后相关支出也会删除。继续？`:`删除「${m.name}」？`))return;if(mode==='remote'&&sb){try{await delMemberRemote(id)}catch(e){showToast('删除失败:'+e.message);return};state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name))}else{state.members=state.members.filter(x=>x.id!==id);state.expenses=state.expenses.filter(e=>e.payer!==m.name&&!(e.participants||[]).includes(m.name));saveLocal()}if(getWhoami()===m.name){clearWhoami()}renderAll();renderMemberModal()}
 
 function renderCategoryModal(){const cats=getCategories();const list=document.getElementById('catList');list.innerHTML='';cats.forEach(c=>{const div=document.createElement('div');div.className='cat-list-item';div.innerHTML=`<span class="name">${esc(c)}</span><button onclick="removeCategory('${esc(c)}')">删除</button>`;list.appendChild(div)})}
 function openCategoriesModal(){renderCategoryModal();document.getElementById('categoriesModal').classList.add('open')}
@@ -426,7 +495,7 @@ function addCategory(){const inp=document.getElementById('newCatInput');if(!inp)
 function removeCategory(name){const cats=getCategories();if(cats.length<=1){showToast('至少保留一个类目');return}const idx=cats.indexOf(name);if(idx>=0)cats.splice(idx,1);setCategories(cats);renderCategoryModal();renderForm()}
 
 function renderWhoamiBtn(){const who=getWhoami();const btn=document.getElementById('whoamiBtn');if(who){btn.textContent='👤 我：'+who;btn.className='whoami-btn set'}else{btn.textContent='👤 未选择';btn.className='whoami-btn'}}
-function renderWhoamiModal(){const list=document.getElementById('whoamiList'),who=getWhoami();list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:10px 0;font-size:13px">请先添加成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.style.cssText='padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center';if(m.name===who)div.style.background='var(--good-soft)';div.innerHTML=`<span style="font-weight:600;font-size:14px">${esc(m.name)}</span>${m.name===who?'<span style="font-size:11px;color:var(--good)">✓ 当前</span>':''}`;div.onclick=()=>{setWhoami(m.name);closeWhoamiModal();resetForm()};list.appendChild(div)})}if(who){const clear=document.createElement('div');clear.style.cssText='padding:6px 10px;margin-top:6px;cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft)';clear.textContent='清除选择';clear.onclick=()=>{localStorage.removeItem(LS_WHOAMI);renderWhoamiBtn();closeWhoamiModal();resetForm()};list.appendChild(clear)}}
+function renderWhoamiModal(){const list=document.getElementById('whoamiList'),who=getWhoami();list.innerHTML='';if(state.members.length===0){list.innerHTML='<div style="color:var(--ink-soft);padding:10px 0;font-size:13px">请先添加成员</div>'}else{state.members.forEach(m=>{const div=document.createElement('div');div.style.cssText='padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center';if(m.name===who)div.style.background='var(--good-soft)';div.innerHTML=`<span style="font-weight:600;font-size:14px">${esc(m.name)}</span>${m.name===who?'<span style="font-size:11px;color:var(--good)">✓ 当前</span>':''}`;div.onclick=()=>{setWhoami(m.name);closeWhoamiModal();resetForm()};list.appendChild(div)})}if(who){const clear=document.createElement('div');clear.style.cssText='padding:6px 10px;margin-top:6px;cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft)';clear.textContent='清除选择';clear.onclick=()=>{clearWhoami();closeWhoamiModal();resetForm()};list.appendChild(clear)}}
 function openWhoamiModal(){renderWhoamiModal();document.getElementById('whoamiModal').classList.add('open')}
 function closeWhoamiModal(){document.getElementById('whoamiModal').classList.remove('open')}
 
@@ -449,7 +518,12 @@ function unlockSettings(){
     <label>Anon Key</label><input type="text" id="cfg_key" value="${esc(cfg.key)}">
     <label>出行 ID（可留空）</label><input type="text" id="cfg_trip" value="${esc(cfg.trip)}">
     <div class="modal-help">修改后点保存，页面会自动刷新重连。</div>
-    <div class="modal-footer" style="justify-content:flex-end;margin-top:10px"><button class="ghost" onclick="useLocalMode()">本地模式</button><button class="primary" onclick="saveConfig()">保存并连接</button></div>`;
+    <div class="modal-footer" style="justify-content:flex-end;margin-top:10px"><button class="ghost" onclick="useLocalMode()">本地模式</button><button class="primary" onclick="saveConfig()">保存并连接</button></div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+    <div style="font-size:11px;color:var(--ink-soft)">
+      <span id="resetLink2" style="cursor:pointer;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='.5'" onclick="showResetPrompt2()">⚠️ 结束本次出行 · 清空全部数据</span>
+      <span id="resetPrompt2" style="display:none;margin-left:8px">密码 <input type="password" id="resetPwd2" maxlength="6" style="width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit" onkeydown="if(event.key==='Enter')confirmReset2()"> <button onclick="confirmReset2()" style="background:var(--bad);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit">确认</button> <button onclick="hideResetPrompt2()" style="background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 4px">取消</button></span>
+    </div>`;
 }
 function saveConfig(){const url=document.getElementById('cfg_url').value.trim(),key=document.getElementById('cfg_key').value.trim();let trip=document.getElementById('cfg_trip').value.trim();if(!url||!key){showToast('请填写URL和Key');return}if(!trip){trip='trip-'+Math.random().toString(36).slice(2,8)}localStorage.setItem(LS_KEYS.url,url);localStorage.setItem(LS_KEYS.key,key);localStorage.setItem(LS_KEYS.trip,trip);closeSettingsModal();showToast('配置已保存，重新连接...');setTimeout(()=>location.reload(),800)}
 function useLocalMode(){closeSettingsModal();localStorage.removeItem(LS_KEYS.url);localStorage.removeItem(LS_KEYS.key);localStorage.removeItem(LS_KEYS.trip);showToast('切换到本地模式');setTimeout(()=>location.reload(),600)}
@@ -493,6 +567,7 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 // ============================================================
 function openEditModal(id){document.getElementById('e_weightsPanel').classList.remove('show');document.getElementById('e_weightsToggle').classList.remove('open');
   const e=state.expenses.find(x=>x.id===id);if(!e)return;
+  if(!checkEditDeleteAccess(e))return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){openEditModal(id)},e);return}
   var _editId=id;
   document.getElementById('editModal')._editId=id;
@@ -504,6 +579,9 @@ function openEditModal(id){document.getElementById('e_weightsPanel').classList.r
   document.getElementById('e_amount').value=e.amount;
   document.getElementById('e_desc').value=e.desc;
   document.getElementById('e_note').value=e.note||'';
+  document.getElementById('e_location').value=e.location||'';
+  document.getElementById('e_locDisplay').textContent=e.location||'';
+  document.getElementById('e_locBtn').textContent=e.location?'📍 重新定位':'📍 获取定位';
   // Participants
   const p=document.getElementById('e_participants');
   p.innerHTML=state.members.map(m=>{const checked=(e.participants||[]).includes(m.name)?'checked':'';return`<label class="check-pill ${checked}" data-name-ep="${esc(m.name)}" onclick="toggleEditPill(event)">${esc(m.name)}</label>`}).join("");
@@ -525,13 +603,13 @@ function removeEditImage(idx){_editImages.splice(idx,1);renderEditImagePreviews(
 async function saveEditExpense(){
   const id=document.getElementById('editModal')._editId;const e=state.expenses.find(x=>x.id===id);if(!e)return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){saveEditExpense()},e);return}
-  const date=document.getElementById('e_date').value,cat=document.getElementById('e_cat').value,desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,amount=parseFloat(document.getElementById('e_amount').value),note=document.getElementById('e_note').value.trim(),parts=getEditSelParts();
+  const date=document.getElementById('e_date').value,cat=document.getElementById('e_cat').value,desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,note=document.getElementById('e_note').value.trim(),parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
   const weights={};document.querySelectorAll('[data-ew-name]').forEach(el=>{const n=el.dataset.ewName,v=parseFloat(el.value)||1;if(v!==1)weights[n]=v});
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
-  const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note};
+  const eLoc=document.getElementById('e_location').value;const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note,location:eLoc};
   if(mode==='remote'&&sb){try{await updateExpenseRemote(id,payload);const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload)}catch(err){var em2=err.message||'';if(em2.indexOf('numeric')>-1||em2.indexOf('overflow')>-1)em2='金额超限，请检查数字';showToast('保存失败:'+em2);return}}else{const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload);saveLocal()}
   closeEditModal();_editImages=[];renderAll();showToast('已保存')
 }
@@ -540,18 +618,19 @@ async function saveEditExpense(){
 // Form submit
 // ============================================================
 async function submitExpense(){
-  const date=document.getElementById('f_date').value,cat=document.getElementById('f_cat').value,desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,amount=parseFloat(document.getElementById('f_amount').value),note=document.getElementById('f_note').value.trim(),parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();
+  if(!ensureWhoami(false))return
+  const date=document.getElementById('f_date').value,cat=document.getElementById('f_cat').value,desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,note=document.getElementById('f_note').value.trim(),parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();let amount=parseFloat(document.getElementById('f_amount').value);
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
   const cleanWeights={};for(const n of parts){const v=weights[n]||1;if(v!==1)cleanWeights[n]=v}
-  const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note};
+  const loc=document.getElementById('f_location').value;const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note,location:loc};
   if(mode==='remote'&&sb){try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}catch(e){var em=e.message||'';if(em.indexOf('numeric')>-1||em.indexOf('overflow')>-1)em='金额超限，请检查数字';showToast('保存失败:'+em);return}}else{state.expenses.push({id:uid(),...payload});saveLocal()}
   _tempImages=[];editingId=null;resetForm();renderAll();
 }
 function resetForm(){
-  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';
+  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_location').value='';document.getElementById('f_locDisplay').textContent='';document.getElementById('f_locBtn').textContent='📍 获取定位';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';
   const catSel=document.getElementById('f_cat');const cats=getCategories();catSel.value=cats[0];
   const who=getWhoami(),sel=document.getElementById('f_payer');if(who&&state.members.some(m=>m.name===who))sel.value=who;else if(state.members.length>0)sel.value=state.members[0].name;
   document.querySelectorAll('.check-pill').forEach(el=>el.classList.remove('checked'));
@@ -567,6 +646,7 @@ function cancelEdit(){_tempImages=[];editingId=null;resetForm();renderAll()}
 // ============================================================
 async function deleteExpense(id){
   const e=state.expenses.find(x=>x.id===id);if(!e)return;
+  if(!checkEditDeleteAccess(e))return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){deleteExpense(id)},e);return}
   if(!confirm('确认删除「'+esc(e.desc)+'」？'))return;
   if(mode==='remote'&&sb){try{await delExpenseRemote(id)}catch(err){showToast('删除失败:'+err.message);return};state.expenses=state.expenses.filter(x=>x.id!==id)}else{state.expenses=state.expenses.filter(x=>x.id!==id);saveLocal()}
@@ -588,14 +668,14 @@ function renderExpenseList(){
       const hasNonOne=Object.keys(w).some(k=>(w[k]||1)!==1);
       const partsText=partsArr.length===0?'全员':(hasNonOne?partsArr.map(n=>esc(n)+(w[n]&&w[n]!==1?`(×${w[n]})`:'')).join('、'):partsArr.map(n=>esc(n)).join('、'));
       const imgTag=(e.images||[]).length>0?`<span class="img-indicator" onclick="openLightbox('${esc(e.images[0])}')">📷${e.images.length}</span>`:'';
-      const by=e.created_by?`<div class="byline">录入：${esc(e.created_by)}</div>`:'';
-      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${by}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
+      const locTag=e.location?`<span style="font-size:10px;color:var(--brand);background:var(--brand-soft);padding:1px 5px;border-radius:3px;margin-left:4px">📍${esc(e.location)}</span>`:'';const by=e.created_by?`<div class="byline">录入：${esc(e.created_by)}</div>`:'';
+      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${locTag}${by}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
       body.appendChild(tr);
       // Mobile card
       const card=document.createElement('div');card.className='exp-card';
       const pNames=partsArr.map(n=>esc(n)).join('、');
-      const by2=e.created_by?` · 录：${esc(e.created_by)}`:'';
-      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}${by2}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
+      const locTagM=e.location?`<span style="font-size:10px;color:var(--brand);background:var(--brand-soft);padding:1px 5px;border-radius:3px;margin-left:4px">📍${esc(e.location)}</span>`:'';const by2=e.created_by?` · 录：${esc(e.created_by)}`:'';
+      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}${locTagM}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}${by2}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
     });
   }
   document.getElementById('listBadge').textContent=`${state.expenses.length} 笔`;
@@ -606,19 +686,6 @@ function renderExpenseList(){
 // Summary, Category, Settlement
 // ============================================================
 function computeBalances(){const bal={};state.members.forEach(m=>bal[m.name]={paid:0,owe:0});state.expenses.forEach(e=>{if(!bal[e.payer])bal[e.payer]={paid:0,owe:0};(e.participants||[]).forEach(p=>{if(!bal[p])bal[p]={paid:0,owe:0}})});state.expenses.forEach(e=>{bal[e.payer].paid+=e.amount;const parts=e.participants||[],w=e.weights||{},totalW=parts.reduce((s,n)=>s+(w[n]||1),0);parts.forEach(p=>{bal[p].owe+=totalW>0?r2(e.amount*(w[p]||1)/totalW):0})});Object.keys(bal).forEach(k=>{bal[k].paid=r2(bal[k].paid);bal[k].owe=r2(bal[k].owe);bal[k].net=r2(bal[k].paid-bal[k].owe)});return bal}
-function renderNetInModal(el){
-  if(!el)return;
-  el.innerHTML='';
-  if(state.members.length===0){el.innerHTML='';return}
-  const bal=computeBalances(),allNames=new Set([...state.members.map(m=>m.name),...Object.keys(bal)]);
-  const sum=Object.values(bal).reduce((s,b)=>s+b.net,0);
-  let html='<div style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink-soft)">个人汇总</div><div style="display:flex;flex-wrap:wrap;gap:4px">';
-  allNames.forEach(name=>{const b=bal[name],cls=b.net>0.005?'positive':(b.net<-0.005?'negative':'zero'),tag=b.net>0.005?'应收':(b.net<-0.005?'应付':'已结清');html+=`<div style="background:var(--bg);border-radius:6px;padding:4px 8px;font-size:11px;line-height:1.4"><span style="font-weight:600">${esc(name)}</span> ${fmt(b.paid)}付 / ${fmt(b.owe)}应 <span style="color:${b.net>0.005?'var(--good)':(b.net<-0.005?'var(--bad)':'inherit')}">${fmt(b.net)} ${tag}</span></div>`});
-  html+='</div>';
-  if(Math.abs(sum)>0.5)html+='<div style="font-size:10px;color:var(--bad);margin-top:4px">⚠ 数据不一致</div>';
-  else html+='<div style="font-size:10px;color:var(--good);margin-top:4px">✓ 数据自洽</div>';
-  el.innerHTML=html
-}
 function renderSummary(){/* summary moved to members modal */}
 
 function openCategoryPopup(e){
@@ -638,6 +705,51 @@ function openCategoryPopup(e){
   setTimeout(()=>document.addEventListener('click',closeCategoryPopup,{once:true}),0)
 }
 function closeCategoryPopup(){document.getElementById('catPopup').style.display='none'}
+function openDetailPopup(e,type,name){
+  e.stopPropagation();
+  const popup=document.getElementById('dePop_'+name);
+  if(!popup)return;
+  // Toggle
+  if(popup.style.display==='block'){closeDetailPopup(name);return}
+  // Close any other open popup
+  document.querySelectorAll('.detail-popup').forEach(p=>{if(p!==popup)p.style.display='none'});
+  const items=[];
+  if(type==='paid'){
+    state.expenses.forEach(ex=>{if(ex.payer===name)items.push({desc:ex.desc,date:ex.date,amt:ex.amount,location:ex.location})});
+  }else{
+    state.expenses.forEach(ex=>{
+      if(!ex.participants||!ex.participants.includes(name))return;
+      const totalW=(ex.participants||[]).reduce((s,n)=>s+(ex.weights[n]||1),0);
+      const share=r2(totalW>0?ex.amount*(ex.weights[name]||1)/totalW:0);
+      items.push({desc:ex.desc,date:ex.date,amt:share,location:ex.location})
+    });
+  }
+  let html='<div class="detail-popup-head"><span>'+(type==='paid'?'已实付明细':'应分摊明细')+'</span><button class="detail-popup-close" onclick="closeDetailPopup(\''+name+'\')">×</button></div>';
+  if(items.length===0){
+    html+='<div class="de-empty">暂无数据</div>';
+  }else{
+    items.sort((a,b)=>b.amt-a.amt);
+    items.forEach(it=>{const locStr=it.location?' 📍'+esc(it.location):'';html+='<div class="de-row"><span class="de-desc">'+(it.date||'')+' '+esc(it.desc)+locStr+'</span><span class="de-amt">'+fmt(it.amt)+'</span></div>'});
+  }
+  popup.innerHTML=html;
+  popup.style.display='block';
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click',function h(){closeDetailPopup(name);document.removeEventListener('click',h)},{once:true}),0);
+}
+function closeDetailPopup(name){const p=document.getElementById('dePop_'+name);if(p)p.style.display='none';}
+function showConsistencyDetail(e){
+  e.stopPropagation();
+  const bal=computeBalances();
+  let lines=[];
+  Object.entries(bal).forEach(([name,b])=>{
+    const diff=r2(b.paid-b.owe);
+    lines.push(`${name}：实付${fmt(b.paid)} 分摊${fmt(b.owe)} 净额${fmt(diff)}`);
+  });
+  const sum=r2(Object.values(bal).reduce((s,b)=>s+b.net,0));
+  lines.push('','总净额合计：'+fmt(sum)+'（应为 ¥0.00，差值来自权重舍入或数据不完整）');
+  const msg=lines.join('\n');
+  alert('数据一致性详情\n\n'+msg);
+}
 
 // ============================================================
 // Settlement
@@ -649,14 +761,15 @@ function closeSettlementModal(){document.getElementById('settlementModal').class
 // ============================================================
 // Reset
 // ============================================================
-function showResetPrompt(){document.getElementById('resetLink').style.display='none';document.getElementById('resetPrompt').style.display='inline';setTimeout(()=>document.getElementById('resetPwd').focus(),100)}
-function hideResetPrompt(){document.getElementById('resetLink').style.display='';document.getElementById('resetPrompt').style.display='none';document.getElementById('resetPwd').value=''}
-async function confirmReset(){
-  const pwd=document.getElementById('resetPwd').value;
-  if(pwd!==SUPER_PWD){showToast('密码错误');document.getElementById('resetPwd').value='';return}
-  if(!confirm('⚠️ 将清空本出行所有成员和支出。不可撤销。确定？')){hideResetPrompt();return}
-  if(mode==='remote'&&sb){try{await sb.from('expenses').delete().eq('trip_id',TRIP_ID);await sb.from('members').delete().eq('trip_id',TRIP_ID)}catch(e){showToast('清空失败:'+e.message);hideResetPrompt();return}}else{saveLocal()}
-  state={members:[],expenses:[]};_tempImages=[];_editImages=[];editingId=null;hideResetPrompt();closeSettlementModal();resetForm();renderAll();showToast('✓ 已清空')
+function showResetPrompt2(){document.getElementById('resetLink2').style.display='none';document.getElementById('resetPrompt2').style.display='inline';setTimeout(()=>document.getElementById('resetPwd2').focus(),100)}
+function hideResetPrompt2(){document.getElementById('resetLink2').style.display='';document.getElementById('resetPrompt2').style.display='none';document.getElementById('resetPwd2').value=''}
+
+async function confirmReset2(){
+  const pwd=document.getElementById('resetPwd2').value;
+  if(pwd!==SUPER_PWD){showToast('密码错误');document.getElementById('resetPwd2').value='';return}
+  if(!confirm('⚠️ 将清空本出行所有成员和支出。不可撤销。确定？')){hideResetPrompt2();return}
+  if(mode==='remote'&&sb){try{await sb.from('expenses').delete().eq('trip_id',TRIP_ID);await sb.from('members').delete().eq('trip_id',TRIP_ID)}catch(e){showToast('清空失败:'+e.message);hideResetPrompt2();return}}else{saveLocal()}
+  state={members:[],expenses:[]};_tempImages=[];_editImages=[];editingId=null;hideResetPrompt2();closeSettingsModal();resetForm();renderAll();showToast('✓ 已清空')
 }
 
 async function copySettlement(){if(state.expenses.length===0){showToast('暂无数据');return}const transfers=settle(),bal=computeBalances(),lines=['【出行费用结算清单】',''];Object.entries(bal).forEach(([name,b])=>{if(b.net>0.005)lines.push(name+'：应收 ¥'+b.net.toFixed(2));else if(b.net<-0.005)lines.push(name+'：应付 ¥'+(-b.net).toFixed(2))});lines.push('','—— 转账方案 ——');transfers.forEach((t,i)=>lines.push((i+1)+'. '+t.from+' → '+t.to+'：¥'+t.amount.toFixed(2)));lines.push('','共 '+transfers.length+' 笔');try{await navigator.clipboard.writeText(lines.join('\n'));showToast('✓ 已复制到剪贴板')}catch(e){prompt('复制失败，请手动选择：',lines.join('\n'))}}
@@ -680,7 +793,7 @@ renderWhoamiBtn();
     var u=new URL(location.href);
     if(!u.searchParams.get('trip')){u.searchParams.set('trip',TRIP_ID);history.replaceState(null,'',u.toString())}
   })();
-  bootstrapLocal();initConnection();
+  bootstrapLocal();_adminDelete=false;initConnection();
 setTimeout(()=>{if(state.members.length>0&&!getWhoami())openWhoamiModal()},1500);
 </script>
 </body>

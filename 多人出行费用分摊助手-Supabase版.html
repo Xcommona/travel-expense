@@ -203,12 +203,6 @@
   .lightbox-mask.open{display:flex}
   .lightbox-mask img{max-width:95vw;max-height:90vh;border-radius:6px;object-fit:contain}
   .lightbox-mask .lb-close{position:absolute;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;z-index:1;background:none;border:none}
-  .upload-picker-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:12px}
-  .upload-picker-mask.open{display:flex}
-  .upload-picker-popup{background:#fff;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.15);max-width:320px;width:100%;overflow:hidden}
-  .upload-picker-popup .pick-btn{display:block;width:100%;padding:16px 20px;border:none;border-bottom:1px solid var(--line);background:#fff;font-size:16px;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px}
-  .upload-picker-popup .pick-btn:last-child{border-bottom:none;color:var(--ink-soft);font-size:13px;text-align:center;justify-content:center}
-  .upload-picker-popup .pick-btn:active{background:#f3f4f6}
   .settle-transfer-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
   .settle-transfer-item .idx{width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
   .settle-transfer-item .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -291,7 +285,7 @@
       <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="例如：从酒店打车到机场、晚上在解放碑吃火锅、如家两晚"></div>
       <div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
       <div class="form-field full"><div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none"><span class="arrow">▸</span> 高级：自定义分摊份数</div><div class="weights-panel" id="weightsPanel"></div></div>
-      <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="f_images"></div><input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)"><input type="file" id="albumInput" accept="image/*" multiple style="display:none" onchange="onImagesSelected(this)"></div>
+      <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="f_images"></div><input type="file" id="albumInput" accept="image/*" multiple style="display:none" onchange="onImagesSelected(this)"></div>
     </div>
     <div class="form-actions">
       <button class="primary" id="submitBtn" onclick="submitExpense()">＋ 添加这笔</button>
@@ -341,15 +335,12 @@
     <div class="form-field full"><label>说明</label><input type="text" id="e_desc"></div>
     <div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
     <div class="form-field full"><div class="weights-toggle" id="e_weightsToggle" onclick="toggleEditWeights()"><span class="arrow">▸</span> 自定义分摊份数</div><div class="weights-panel" id="e_weightsPanel"></div></div>
-    <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="e_images"></div><input type="file" id="e_imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onEditImagesSelected(this)"><input type="file" id="e_albumInput" accept="image/*" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
+    <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="e_images"></div><input type="file" id="e_albumInput" accept="image/*" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
   </div>
 </div><div class="modal-footer"><button class="primary" onclick="saveEditExpense()">✓ 保存修改</button><button class="add-img-btn" onclick="openUploadPicker('e')">📎 上传凭证</button><button class="ghost" onclick="closeEditModal()">取消</button></div></div></div>
 
 <!-- ===== Lightbox ===== -->
 <div class="lightbox-mask" id="lightbox" onclick="closeLightbox()"><button class="lb-close">×</button><img id="lightboxImg" src="" alt="凭证"></div>
-
-<!-- ===== Upload Picker ===== -->
-<div class="upload-picker-mask" id="uploadPicker"><div class="upload-picker-popup"><button class="pick-btn" id="pickCamera">📷 拍照</button><button class="pick-btn" id="pickAlbum">🖼 从相册选择</button><button class="pick-btn" onclick="closeUploadPicker()">取消</button></div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -617,11 +608,7 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 // Upload picker
 // ============================================================
 let _uploadTarget='f';
-function openUploadPicker(target){_uploadTarget=target;const mask=document.getElementById('uploadPicker');mask.classList.add('open');
-  document.getElementById('pickCamera').onclick=function(){mask.classList.remove('open');document.getElementById(_uploadTarget==='f'?'imgInput':'e_imgInput').click()};
-  document.getElementById('pickAlbum').onclick=function(){mask.classList.remove('open');document.getElementById(_uploadTarget==='f'?'albumInput':'e_albumInput').click()};
-}
-function closeUploadPicker(){document.getElementById('uploadPicker').classList.remove('open')}
+function openUploadPicker(target){document.getElementById(target==='f'?'albumInput':'e_albumInput').click()}
 
 // ============================================================
 // Edit modal (separate)

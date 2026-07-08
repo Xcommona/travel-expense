@@ -103,7 +103,7 @@
   .images-preview .thumb{width:56px;height:56px;border-radius:6px;border:1px solid var(--line);background-size:cover;background-position:center;cursor:pointer;position:relative}
   .images-preview .thumb .del-img{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#fff;font-size:10px;line-height:18px;text-align:center;cursor:pointer;display:none}
   .images-preview .thumb:hover .del-img{display:block}
-  .add-img-btn{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--ink-soft);cursor:pointer;background:transparent;font-family:inherit;margin-top:4px}
+  .add-img-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-strong);border-radius:6px;padding:9px 18px;font-size:12px;color:var(--ink);cursor:pointer;background:#fff;font-family:inherit;margin-top:0}
   .add-img-btn:hover{border-color:var(--brand);color:var(--brand)}
   .form-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   button.primary{background:var(--brand);color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:var(--shadow)}
@@ -198,6 +198,12 @@
   .lightbox-mask.open{display:flex}
   .lightbox-mask img{max-width:95vw;max-height:90vh;border-radius:6px;object-fit:contain}
   .lightbox-mask .lb-close{position:absolute;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;z-index:1;background:none;border:none}
+  .upload-picker-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:12px}
+  .upload-picker-mask.open{display:flex}
+  .upload-picker-popup{background:#fff;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.15);max-width:320px;width:100%;overflow:hidden}
+  .upload-picker-popup .pick-btn{display:block;width:100%;padding:16px 20px;border:none;border-bottom:1px solid var(--line);background:#fff;font-size:16px;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px}
+  .upload-picker-popup .pick-btn:last-child{border-bottom:none;color:var(--ink-soft);font-size:13px;text-align:center;justify-content:center}
+  .upload-picker-popup .pick-btn:active{background:#f3f4f6}
   .settle-transfer-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
   .settle-transfer-item .idx{width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
   .settle-transfer-item .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -210,10 +216,16 @@
   .stat .label{font-size:10px;color:var(--ink-soft);text-transform:uppercase}
   .stat .value{font-size:20px;font-weight:700;color:var(--brand);margin-top:1px}
   .result-summary{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-  .byline{font-size:11px;color:var(--ink-soft)}
+  .byline{font-size:11px;color:var(--ink-soft);margin-top:3px}
+  .name-tag{display:inline-block;background:var(--ink-light);color:var(--ink-strong);padding:2px 8px;border-radius:10px;font-weight:500;font-size:12px;line-height:1.4}
+  .ec-recorder,.byline .name-tag{font-size:11px}
+  .parts-display .name-tag{margin:1px 2px}
+  .share-amt{font-size:10px;color:var(--ink-soft);margin-left:1px}
   .super-input{font-size:11px;margin-left:4px}
   .super-input input{width:48px;padding:2px 4px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;font-family:inherit}
   .super-input button{background:#fff;color:var(--ink);border:1px solid var(--line-strong);padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-family:inherit}
+  .admin-only{display:none}.admin-visible{display:block!important}.admin-visible-inline{display:inline!important}
+  .cat-badge{display:inline-block;font-size:9px;color:var(--ink-soft);background:var(--ink-light);padding:1px 5px;border-radius:8px;margin-left:4px;vertical-align:middle}
   .locked-msg{font-size:12px;color:var(--bad);margin-left:6px}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;z-index:3000;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s}
   .toast.show{opacity:1}
@@ -252,7 +264,7 @@
   <div class="status-actions">
     <button class="whoami-btn" id="whoamiBtn" onclick="openWhoamiModal()">👤 未选择</button>
     <button onclick="openMembersModal()">👥 成员</button>
-    <button onclick="openCategoriesModal()">🏷 类目</button>
+    <button id="catNavBtn" style="display:none" onclick="openCategoriesModal()">🏷 类目</button>
     <button onclick="openSettingsModal()">⚙</button>
     <button class="settle-nav-btn" onclick="openSettlementModal()">💰 结算</button>
     <button onclick="openShareModal()" id="shareBtn" style="display:none">📋 分享</button>
@@ -267,18 +279,18 @@
     <h2><span class="num">1</span> 录入支出 <span class="badge" id="formMode">新增</span></h2>
     <div class="form-grid">
       <div class="form-field"><label>日期</label><input type="date" id="f_date"></div>
-      <div class="form-field"><label>类目 <span class="edit-link" onclick="openCategoriesModal()">编辑</span></label><select id="f_cat"></select></div>
+      <div class="form-field" id="f_cat_field" style="display:none"><label>类目 <span class="edit-link" onclick="openCategoriesModal()">编辑</span></label><select id="f_cat"></select></div>
       <div class="form-field"><label>付款人</label><select id="f_payer"></select></div>
       <div class="form-field"><label>金额（¥）</label><input type="number" id="f_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
-      <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="比如：机场打车、两晚酒店"></div>
+      <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="例如：从酒店打车到机场、晚上在解放碑吃火锅、如家两晚"></div>
       <div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
       <div class="form-field full"><div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none"><span class="arrow">▸</span> 高级：自定义分摊份数</div><div class="weights-panel" id="weightsPanel"></div></div>
-      <div class="form-field full"><label>备注</label><input type="text" id="f_note" placeholder="比如：2间×2晚"></div>
-      <div class="form-field full"><label>付款凭证（拍照，最多5张）</label><div class="images-preview" id="f_images"></div><label class="add-img-btn" for="imgInput">📷 添加图片</label><input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)"></div>
+      <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="f_images"></div><input type="file" id="imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onImagesSelected(this)"><input type="file" id="albumInput" accept="image/*" multiple style="display:none" onchange="onImagesSelected(this)"></div>
     </div>
     <div class="form-actions">
       <button class="primary" id="submitBtn" onclick="submitExpense()">＋ 添加这笔</button>
-      
+      <button class="add-img-btn" onclick="openUploadPicker('f')">📎 上传凭证</button>
+
       <span class="form-summary" id="formSummary"></span>
     </div>
   </div>
@@ -318,19 +330,21 @@
 <div class="modal-mask" id="editModal"><div class="modal wide"><div class="modal-header"><h2>✏ 编辑支出</h2><button class="close" onclick="closeEditModal()">×</button></div><div class="modal-body">
   <div class="form-grid">
     <div class="form-field"><label>日期</label><input type="date" id="e_date"></div>
-    <div class="form-field"><label>类目</label><select id="e_cat"></select></div>
+    <div class="form-field" id="e_cat_field" style="display:none"><label>类目</label><select id="e_cat"></select></div>
     <div class="form-field"><label>付款人</label><select id="e_payer"></select></div>
     <div class="form-field"><label>金额（¥）</label><input type="number" id="e_amount" step="0.01" min="0" inputmode="decimal"></div>
     <div class="form-field full"><label>说明</label><input type="text" id="e_desc"></div>
     <div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
     <div class="form-field full"><div class="weights-toggle" id="e_weightsToggle" onclick="toggleEditWeights()"><span class="arrow">▸</span> 自定义分摊份数</div><div class="weights-panel" id="e_weightsPanel"></div></div>
-    <div class="form-field full"><label>备注</label><input type="text" id="e_note"></div>
-    <div class="form-field full"><label>付款凭证</label><div class="images-preview" id="e_images"></div><label class="add-img-btn" for="e_imgInput">📷 添加图片</label><input type="file" id="e_imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
+    <div class="form-field full" style="margin-bottom:0"><div class="images-preview" id="e_images"></div><input type="file" id="e_imgInput" accept="image/*" capture="environment" multiple style="display:none" onchange="onEditImagesSelected(this)"><input type="file" id="e_albumInput" accept="image/*" multiple style="display:none" onchange="onEditImagesSelected(this)"></div>
   </div>
-</div><div class="modal-footer"><button class="primary" onclick="saveEditExpense()">✓ 保存修改</button><button class="ghost" onclick="closeEditModal()">取消</button></div></div></div>
+</div><div class="modal-footer"><button class="primary" onclick="saveEditExpense()">✓ 保存修改</button><button class="add-img-btn" onclick="openUploadPicker('e')">📎 上传凭证</button><button class="ghost" onclick="closeEditModal()">取消</button></div></div></div>
 
 <!-- ===== Lightbox ===== -->
 <div class="lightbox-mask" id="lightbox" onclick="closeLightbox()"><button class="lb-close">×</button><img id="lightboxImg" src="" alt="凭证"></div>
+
+<!-- ===== Upload Picker ===== -->
+<div class="upload-picker-mask" id="uploadPicker"><div class="upload-picker-popup"><button class="pick-btn" id="pickCamera">📷 拍照</button><button class="pick-btn" id="pickAlbum">🖼 从相册选择</button><button class="pick-btn" onclick="closeUploadPicker()">取消</button></div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -344,7 +358,7 @@ const HARDCODED = {
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
 const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=30*24*60*60*1000;
-const APP_VERSION='V0.9';
+const APP_VERSION='V0.17';
 const VERSION_LOG=[
   {ver:'V0.1',date:'2026-07-07',items:'初始版本：多人录入、实时同步、Supabase后端、权重分摊、拍照凭证、结算方案'},
   {ver:'V0.2',date:'2026-07-07',items:'修复金额numeric overflow；SDK CDN fallback；隐藏密码提示；分类分析改为合计金额浮窗；个人汇总移入成员弹窗；成员删除需管理员密码'},
@@ -355,6 +369,14 @@ const VERSION_LOG=[
   {ver:'V0.7',date:'2026-07-07',items:'全面校验分摊计算和逻辑流程（46项全通过）；删除定位功能；新增成员后自动设为我是谁'},
   {ver:'V0.8',date:'2026-07-07',items:'身份缓存改为30天；自定义分摊份数改为整数；版本号V0.8显示在状态栏；点版本号查看更新明细'},
   {ver:'V0.9',date:'2026-07-08',items:'实现版本更新记录弹窗功能；点击版本号可查看完整更新历史'},
+  {ver:'V0.10',date:'2026-07-08',items:'录入人显示添加底框标签样式；版本更新记录仅显示最近3版'},
+  {ver:'V0.11',date:'2026-07-08',items:'已录支出改为倒序排列（最新在上）；付款人、分摊人、录入人名字统一加圆角底框标签'},
+  {ver:'V0.12',date:'2026-07-08',items:'图片上传增加相册选择入口（拍照+相册两个按钮）；已录支出分摊人旁显示各自分摊金额'},
+  {ver:'V0.13',date:'2026-07-08',items:'图片上传合并为"上传凭证"按钮，点击弹出选择拍照或相册'},
+  {ver:'V0.14',date:'2026-07-08',items:'上传凭证按钮移到操作栏，与"添加这笔"并列；编辑弹窗同理放入底部按钮栏'},
+  {ver:'V0.15',date:'2026-07-08',items:'删除备注字段，备注功能合并到说明中；清理所有note相关代码'},
+  {ver:'V0.16',date:'2026-07-08',items:'类目字段隐藏，根据说明关键词自动识别分类（餐饮/交通/住宿/门票/购物）；管理员模式下类目字段可见可手动选择'},
+  {ver:'V0.17',date:'2026-07-08',items:'优化说明placeholder示例；顶部"类目"导航按钮仅管理员可见'},
 ];
 let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false,_pendingWhoami=false;
 let state={members:[],expenses:[]};
@@ -374,6 +396,40 @@ function setWhoami(name){localStorage.setItem(LS_WHOAMI,name);localStorage.setIt
 function getCategories(){try{const raw=localStorage.getItem(LS_CATS);return raw?JSON.parse(raw):[...DEFAULT_CATS]}catch(e){return[...DEFAULT_CATS]}}
 function setCategories(arr){localStorage.setItem(LS_CATS,JSON.stringify(arr))}
 
+
+// ============================================================
+// Auto-categorize from description keywords
+// ============================================================
+const CAT_KEYWORDS = [
+  {cat:'餐饮', kw:['烤肠','肠','水','奶茶','吃饭','餐','包子','早餐','午餐','晚餐','饭','面','粉','汤','串','火锅','烧烤','小吃','菜','零食','饮料','咖啡','酒','啤','可乐','雪碧','果汁','牛奶','茶','饼','馕','肉','鱼','虾','蟹','鸡','鸭','牛','羊','猪']},
+  {cat:'交通', kw:['油费','加油','油','过路费','高速','etc','停车','打车','出租车','滴滴','公交','地铁','火车','高铁','机票','飞机','船','轮船','摆渡','缆车','索道','观光车','电瓶车','租车','车费','路费','通行']},
+  {cat:'住宿', kw:['酒店','宾馆','民宿','客栈','青旅','住宿','房费','房间','双人','套房','单间','标间','大床','入住','退房','airbnb','bnb']},
+  {cat:'门票', kw:['门票','景区','景点','公园','游乐园','乐园','博物馆','展览','演出','演唱会','电影院','电影','剧场','票','入园','预约']},
+  {cat:'购物', kw:['购物','买','纪念品','特产','衣服','鞋子','包','帽子','眼镜','化妆品','护肤品','日用品','超市']},
+  {cat:'其他', kw:[]}
+];
+function autoCategorize(desc){
+  const s = desc.toLowerCase();
+  for(const entry of CAT_KEYWORDS){
+    if(entry.cat==='其他') continue;
+    for(const k of entry.kw){
+      if(s.includes(k)) return entry.cat;
+    }
+  }
+  return '其他';
+}
+function updateAdminVisibility(){
+  const cats = document.querySelectorAll('#f_cat_field, #e_cat_field');
+  cats.forEach(el => {
+    if(_superOK) el.classList.add('admin-visible');
+    else el.classList.remove('admin-visible');
+  });
+  const catNav = document.getElementById('catNavBtn');
+  if(_superOK) catNav.style.display='';
+  else catNav.style.display='none';
+}
+
+
 // ============================================================
 // PERMISSION CHECK
 // ============================================================
@@ -390,7 +446,7 @@ function checkEditDeleteAccess(expense){
 }
 function promptSuperPassword(actionFn,expense){
   const pwd=prompt('此支出由「'+esc(expense.created_by||'未知')+'」录入。仅录入人可编辑/删除。\n输入管理员密码可跨用户操作：');
-  if(pwd===SUPER_PWD){_superOK=true;actionFn()}else if(pwd!==null){showToast('密码错误，仅录入人可操作')}
+  if(pwd===SUPER_PWD){_superOK=true;updateAdminVisibility();actionFn()}else if(pwd!==null){showToast('密码错误，仅录入人可操作')}
 }
 
 // ============================================================
@@ -422,8 +478,8 @@ function subscribeRemote(){sb.channel('mem-'+TRIP_ID).on('postgres_changes',{eve
 // ============================================================
 async function addMemberRemote(name){const{data,error}=await sb.from('members').insert({trip_id:TRIP_ID,name}).select().single();if(error)throw error;return data}
 async function delMemberRemote(id){const m=state.members.find(x=>x.id===id);const n=m?m.name:'';if(n){await sb.from('expenses').delete().eq('trip_id',TRIP_ID).eq('payer',n);await sb.from('expenses').delete().eq('trip_id',TRIP_ID).contains('participants',[n])}await sb.from('members').delete().eq('id',id)}
-async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
-async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[],note:e.note||''};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
+async function addExpenseRemote(e){const row={trip_id:TRIP_ID,date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[]};try{row.created_by=getWhoami()}catch(_){}const{data,error}=await sb.from('expenses').insert(row).select().single();if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{data:d2,error:e2}=await sb.from('expenses').insert(row).select().single();if(e2)throw e2;return d2}throw error}return data}
+async function updateExpenseRemote(id,e){const row={date:e.date,category:e.category,description:e.desc,payer:e.payer,amount:e.amount,participants:e.participants,weights:e.weights||{},images:e.images||[]};try{row.created_by=e.created_by||''}catch(_){}const{error}=await sb.from('expenses').update(row).eq('id',id);if(error){if(error.message&&error.message.indexOf('created_by')>-1){delete row.created_by;const{error:e2}=await sb.from('expenses').update(row).eq('id',id);if(e2)throw e2}else throw error}}
 async function delExpenseRemote(id){await sb.from('expenses').delete().eq('id',id)}
 
 // ============================================================
@@ -496,6 +552,7 @@ function unlockSettings(){
   if(pwd!==SUPER_PWD){showToast('密码错误');return}
   _superOK=true;
   _adminDelete=true;
+  updateAdminVisibility();
   showToast('管理员已解锁·设置和删除功能已启用');
   const body=document.getElementById('settingsBody');
   const cfg=getConfig();
@@ -550,6 +607,16 @@ function openLightbox(uri){document.getElementById('lightboxImg').src=uri;docume
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
 
 // ============================================================
+// Upload picker
+// ============================================================
+let _uploadTarget='f';
+function openUploadPicker(target){_uploadTarget=target;const mask=document.getElementById('uploadPicker');mask.classList.add('open');
+  document.getElementById('pickCamera').onclick=function(){mask.classList.remove('open');document.getElementById(_uploadTarget==='f'?'imgInput':'e_imgInput').click()};
+  document.getElementById('pickAlbum').onclick=function(){mask.classList.remove('open');document.getElementById(_uploadTarget==='f'?'albumInput':'e_albumInput').click()};
+}
+function closeUploadPicker(){document.getElementById('uploadPicker').classList.remove('open')}
+
+// ============================================================
 // Edit modal (separate)
 // ============================================================
 function openEditModal(id){document.getElementById('e_weightsPanel').classList.remove('show');document.getElementById('e_weightsToggle').classList.remove('open');
@@ -565,7 +632,6 @@ function openEditModal(id){document.getElementById('e_weightsPanel').classList.r
   const payerSel=document.getElementById('e_payer');payerSel.innerHTML=state.members.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join("");payerSel.value=e.payer;
   document.getElementById('e_amount').value=e.amount;
   document.getElementById('e_desc').value=e.desc;
-  document.getElementById('e_note').value=e.note||'';
   // Participants
   const p=document.getElementById('e_participants');
   p.innerHTML=state.members.map(m=>{const checked=(e.participants||[]).includes(m.name)?'checked':'';return`<label class="check-pill ${checked}" data-name-ep="${esc(m.name)}" onclick="toggleEditPill(event)">${esc(m.name)}</label>`}).join("");
@@ -587,13 +653,13 @@ function removeEditImage(idx){_editImages.splice(idx,1);renderEditImagePreviews(
 async function saveEditExpense(){
   const id=document.getElementById('editModal')._editId;const e=state.expenses.find(x=>x.id===id);if(!e)return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){saveEditExpense()},e);return}
-  const date=document.getElementById('e_date').value,cat=document.getElementById('e_cat').value,desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,note=document.getElementById('e_note').value.trim(),parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
+  const date=document.getElementById('e_date').value,cat=_superOK?document.getElementById('e_cat').value:autoCategorize(document.getElementById('e_desc').value.trim()),desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
   const weights={};document.querySelectorAll('[data-ew-name]').forEach(el=>{const n=el.dataset.ewName,v=parseFloat(el.value)||1;if(v!==1)weights[n]=v});
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
-  const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by,note};
+  const payload={date,category:cat,desc,payer,amount,participants:parts,weights,images:_editImages,created_by:e.created_by};
   if(mode==='remote'&&sb){try{await updateExpenseRemote(id,payload);const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload)}catch(err){var em2=err.message||'';if(em2.indexOf('numeric')>-1||em2.indexOf('overflow')>-1)em2='金额超限，请检查数字';showToast('保存失败:'+em2);return}}else{const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)Object.assign(state.expenses[idx],payload);saveLocal()}
   closeEditModal();_editImages=[];renderAll();showToast('已保存')
 }
@@ -603,18 +669,18 @@ async function saveEditExpense(){
 // ============================================================
 async function submitExpense(){
   if(!ensureWhoami(false))return
-  const date=document.getElementById('f_date').value,cat=document.getElementById('f_cat').value,desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,note=document.getElementById('f_note').value.trim(),parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();let amount=parseFloat(document.getElementById('f_amount').value);
+  const date=document.getElementById('f_date').value,cat=_superOK?document.getElementById('f_cat').value:autoCategorize(document.getElementById('f_desc').value.trim()),desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();let amount=parseFloat(document.getElementById('f_amount').value);
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
   amount=Math.round(amount*100)/100;
   const cleanWeights={};for(const n of parts){const v=weights[n]||1;if(v!==1)cleanWeights[n]=v}
-  const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami(),note};
+  const payload={date,category:cat,desc,payer,amount,participants:parts,weights:cleanWeights,images,created_by:getWhoami()};
   if(mode==='remote'&&sb){try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}catch(e){var em=e.message||'';if(em.indexOf('numeric')>-1||em.indexOf('overflow')>-1)em='金额超限，请检查数字';showToast('保存失败:'+em);return}}else{state.expenses.push({id:uid(),...payload});saveLocal()}
   _tempImages=[];editingId=null;resetForm();renderAll();
 }
 function resetForm(){
-  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';document.getElementById('f_note').value='';
+  document.getElementById('f_date').value=todayStr();document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';
   const catSel=document.getElementById('f_cat');const cats=getCategories();catSel.value=cats[0];
   const who=getWhoami(),sel=document.getElementById('f_payer');if(who&&state.members.some(m=>m.name===who))sel.value=who;else if(state.members.length>0)sel.value=state.members[0].name;
   document.querySelectorAll('.check-pill').forEach(el=>el.classList.remove('checked'));
@@ -645,21 +711,21 @@ function renderExpenseList(){
   body.innerHTML='';cards.innerHTML='';
   if(state.expenses.length===0){body.innerHTML='<tr class="empty-row"><td colspan="7">还没有任何支出。</td></tr>';cards.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:24px 0;font-size:13px;font-style:italic">还没有任何支出</div>'}
   else{
-    const sorted=[...state.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const sorted=[...state.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.id||'').localeCompare(a.id||''));
     sorted.forEach(e=>{
       const tr=document.createElement('tr');if(e.id===editingId)tr.className='editing';
       const partsArr=e.participants||[],w=e.weights||{};
       const hasNonOne=Object.keys(w).some(k=>(w[k]||1)!==1);
-      const partsText=partsArr.length===0?'全员':(hasNonOne?partsArr.map(n=>esc(n)+(w[n]&&w[n]!==1?`(×${w[n]})`:'')).join('、'):partsArr.map(n=>esc(n)).join('、'));
+      const partsText=partsArr.length===0?'全员':(()=>{const tw=partsArr.reduce((s,n)=>s+(w[n]||1),0);return(hasNonOne?partsArr.map(n=>`<span class="name-tag">${esc(n)}</span> <span class="share-amt">${fmt(r2(e.amount*(w[n]||1)/tw))}</span>`).join(''):partsArr.map(n=>`<span class="name-tag">${esc(n)}</span> <span class="share-amt">${fmt(r2(e.amount/tw))}</span>`).join(''))})();
       const imgTag=(e.images||[]).length>0?`<span class="img-indicator" onclick="openLightbox('${esc(e.images[0])}')">📷${e.images.length}</span>`:'';
-      const by=e.created_by?`<div class="byline">录入：${esc(e.created_by)}</div>`:'';
-      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${by}${e.note?'<div class="parts-display">'+esc(e.note)+'</div>':''}${imgTag}</td><td>${esc(e.payer)}</td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
+      const by=e.created_by?`<div class="byline">录入：<span class="name-tag">${esc(e.created_by)}</span></div>`:'';
+      tr.innerHTML=`<td>${esc(e.date)}</td><td class="cat"><span>${esc(e.category)}</span></td><td>${esc(e.desc)}${by}${imgTag}</td><td><span class="name-tag">${esc(e.payer)}</span></td><td class="num">${fmt(e.amount)}</td><td class="parts-display">${partsText}</td><td class="actions"><button onclick="openEditModal('${e.id}')">编辑</button><button class="del" onclick="deleteExpense('${e.id}')">删除</button></td>`;
       body.appendChild(tr);
       // Mobile card
       const card=document.createElement('div');card.className='exp-card';
-      const pNames=partsArr.map(n=>esc(n)).join('、');
-      const by2=e.created_by?` · 录：${esc(e.created_by)}`:'';
-      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}</div><div class="ec-meta">${esc(e.date)} · 付：${esc(e.payer)} · 分：${pNames||'全员'}${by2}</div>${e.note?'<div class="ec-meta">备注：'+esc(e.note)+'</div>':''}${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
+      const pNames=partsArr.map(n=>{const tw=partsArr.reduce((s,n2)=>s+(w[n2]||1),0);return`<span class="name-tag">${esc(n)}</span> <span class="share-amt">${fmt(r2(e.amount*(w[n]||1)/tw))}</span>`}).join('');
+      const by2=e.created_by?` · 录：<span class="name-tag ec-recorder">${esc(e.created_by)}</span>`:'';
+      card.innerHTML=`<div class="top-line"><span class="ec-cat">${esc(e.category)}</span><span class="ec-amount">${fmt(e.amount)}</span></div><div class="ec-desc">${esc(e.desc)}</div><div class="ec-meta">${esc(e.date)} · 付：<span class="name-tag">${esc(e.payer)}</span> · 分：${pNames||'全员'}${by2}</div>${(e.images||[]).length>0?'<div class="ec-imgs">'+e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')+'</div>':''}<div class="ec-actions"><button onclick="openEditModal(\'${e.id}\')">编辑</button><button class="del" onclick="deleteExpense(\'${e.id}\')">删除</button></div>`;cards.appendChild(card);
     });
   }
   document.getElementById('listBadge').textContent=`${state.expenses.length} 笔`;
@@ -735,8 +801,9 @@ function showConsistencyDetail(e){
   alert('数据一致性详情\n\n'+msg);
 }
 function showVersionLog(){
-  let lines=['版本更新记录',''];
-  VERSION_LOG.forEach(v=>{
+  const recent=VERSION_LOG.slice(-3);
+  let lines=['版本更新记录（最近3版）',''];
+  recent.forEach(v=>{
     lines.push(v.ver+'（'+v.date+'）');
     v.items.split('；').forEach(item=>lines.push('  · '+item));
     lines.push('');
@@ -770,7 +837,7 @@ async function copySettlement(){if(state.expenses.length===0){showToast('暂无�
 // ============================================================
 // Render all
 // ============================================================
-function renderAll(){renderForm();renderExpenseList();renderSummary()}
+function renderAll(){renderForm();renderExpenseList();renderSummary();updateAdminVisibility()}
 
 // ============================================================
 // INIT

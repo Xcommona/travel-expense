@@ -225,6 +225,7 @@
   .result-summary{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
   .byline{font-size:11px;color:var(--ink-soft);margin-top:3px}
   .name-tag{display:inline-block;background:#e8eef5;color:#4a6785;padding:2px 8px;border-radius:10px;font-weight:500;font-size:12px;line-height:1.4}
+  .all-member-badge{display:inline-block;background:var(--brand-soft);color:var(--brand);padding:2px 10px;border-radius:10px;font-weight:600;font-size:12px;line-height:1.4}
   .ec-recorder{font-size:10px;color:var(--ink-soft);margin-top:1px}
   .byline .name-tag{font-size:11px}
   .parts-display .name-tag{margin:1px 2px}
@@ -290,7 +291,7 @@
       <div class="form-field"><label>日期</label><input type="date" id="f_date"></div>
       <div class="form-field" id="f_cat_field" style="display:none"><label>类目 <span class="edit-link" onclick="openCategoriesModal()">编辑</span></label><select id="f_cat"></select></div>
       <div class="form-field"><label>付款人</label><select id="f_payer"></select></div>
-      <div class="form-field"><label>金额（¥）</label><input type="number" id="f_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
+      <div class="form-field"><label>金额（¥）</label><input type="text" id="f_amount" inputmode="decimal" placeholder="0.00 或 100+50*2"></div>
       <div class="form-field full"><label>说明</label><input type="text" id="f_desc" placeholder="例如：从酒店打车到机场、晚上在解放碑吃火锅、如家两晚"></div>
       <div class="form-field full"><label>参与分摊</label><div class="participants" id="f_participants"><span class="empty">请先加成员</span></div><div class="participants-control" id="participantsControl" style="display:none"><a onclick="selAllParts(true)">✓ 全选</a><a onclick="selAllParts(false)">✕ 全不选</a></div></div>
       <div class="form-field full"><div class="weights-toggle" id="weightsToggle" onclick="toggleWeights()" style="display:none"><span class="arrow">▸</span> 高级：自定义分摊份数</div><div class="weights-panel" id="weightsPanel"></div></div>
@@ -333,7 +334,7 @@
 
 
 <!-- ===== Transfer modal ===== -->
-<div class="modal-mask" id="transferModal"><div class="modal"><div class="modal-header"><h2>💸 记一笔转账</h2><button class="close" onclick="closeTransferModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">记录 A 直接付给 B 的金额，最终结算时自动扣减。</p><label>谁转出</label><select id="t_from"></select><label>转给谁</label><select id="t_to"></select><label>金额（¥）</label><input type="number" id="t_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"><label>日期</label><input type="date" id="t_date"><label>说明（可选）</label><input type="text" id="t_desc" placeholder="例如：微信转给小王500"></div><div class="modal-footer"><button class="primary" onclick="submitTransfer()">确认转账</button><button class="ghost" onclick="closeTransferModal()">取消</button></div></div></div>
+<div class="modal-mask" id="transferModal"><div class="modal"><div class="modal-header"><h2>💸 记一笔转账</h2><button class="close" onclick="closeTransferModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">记录 A 直接付给 B 的金额，最终结算时自动扣减。</p><label>谁转出</label><select id="t_from"></select><label>转给谁</label><select id="t_to"></select><label>金额（¥）</label><input type="text" id="t_amount" inputmode="decimal" placeholder="0.00 或 500-20"><label>日期</label><input type="date" id="t_date"><label>说明（可选）</label><input type="text" id="t_desc" placeholder="例如：微信转给小王500"></div><div class="modal-footer"><button class="primary" onclick="submitTransfer()">确认转账</button><button class="ghost" onclick="closeTransferModal()">取消</button></div></div></div>
 
 <!-- ===== Settlement modal ===== -->
 <div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:flex-end;align-items:center;gap:8px"><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
@@ -344,7 +345,7 @@
     <div class="form-field"><label>日期</label><input type="date" id="e_date"></div>
     <div class="form-field" id="e_cat_field" style="display:none"><label>类目</label><select id="e_cat"></select></div>
     <div class="form-field"><label>付款人</label><select id="e_payer"></select></div>
-    <div class="form-field"><label>金额（¥）</label><input type="number" id="e_amount" step="0.01" min="0" inputmode="decimal"></div>
+    <div class="form-field"><label>金额（¥）</label><input type="text" id="e_amount" inputmode="decimal" placeholder="0.00 或 100+50*2"></div>
     <div class="form-field full"><label>说明</label><input type="text" id="e_desc"></div>
     <div class="form-field full"><label>参与分摊</label><div class="participants" id="e_participants"></div></div>
     <div class="form-field full"><div class="weights-toggle" id="e_weightsToggle" onclick="toggleEditWeights()"><span class="arrow">▸</span> 自定义分摊份数</div><div class="weights-panel" id="e_weightsPanel"></div></div>
@@ -367,7 +368,7 @@ const HARDCODED = {
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
 const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=30*24*60*60*1000;
-const APP_VERSION='V0.20';
+const APP_VERSION='V0.21';
 const VERSION_LOG=[
   {ver:'V0.1',date:'2026-07-07',items:'初始版本：多人录入、实时同步、Supabase后端、权重分摊、拍照凭证、结算方案'},
   {ver:'V0.2',date:'2026-07-07',items:'修复金额numeric overflow；SDK CDN fallback；隐藏密码提示；分类分析改为合计金额浮窗；个人汇总移入成员弹窗；成员删除需管理员密码'},
@@ -389,6 +390,7 @@ const VERSION_LOG=[
   {ver:'V0.18',date:'2026-07-08',items:'已录支出重构为卡片式布局：说明+金额突出显示，类目日期收拢副行，分摊人金额紧凑排列，底部操作栏独立'},
   {ver:'V0.19',date:'2026-07-08',items:'大幅扩充自动分类关键词库（5类150+词）；卡片视觉优化（hover微浮、阴影加深、间距微调）；分摊金额均等时简化为"人均 ¥X"显示'},
   {ver:'V0.20',date:'2026-07-13',items:'新增中间转账功能（💸按钮）：A直接付B若干金额，余额自动扣减；转账卡片绿色区分；合计分开显示支出与转账；分类统计排除转账'},
+  {ver:'V0.21',date:'2026-07-13',items:'金额输入支持加减乘除运算（如100+50*2）；全体成员分摊时显示"全员分摊"徽章替代逐人列出'},
 ];
 let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false,_pendingWhoami=false;
 let state={members:[],expenses:[]};
@@ -398,6 +400,15 @@ const DEFAULT_CATS=['餐饮','交通','住宿','门票','购物','其他'];
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,10)}
 function fmt(v){if(v===null||v===undefined||isNaN(v))return" —";const s=v<-0.005?"-":"";return s+"¥"+Math.abs(v).toFixed(2)}
 function r2(x){return Math.round(x*100)/100}
+function parseAmount(str){
+  if(typeof str!=='string')return parseFloat(str)||0;
+  str=str.trim();if(!str)return 0;
+  if(/^[\d+\-*/.() ]+$/.test(str)){
+    try{const r=Function('return ('+str+')')();
+    if(typeof r==='number'&&!isNaN(r)&&isFinite(r))return r}catch(e){}
+  }
+  return parseFloat(str)||0;
+}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
@@ -598,7 +609,7 @@ function renderForm(){const sel=document.getElementById('f_payer'),who=getWhoami
 function getSelParts(){return Array.from(document.querySelectorAll('.check-pill.checked')).map(el=>el.dataset.name).filter(Boolean)}
 function togglePill(e){let el=e.target;while(el&&!el.classList.contains('check-pill'))el=el.parentElement;if(!el)return;el.classList.toggle('checked');renderWeightsPanel();updateFormSummary()}
 function selAllParts(checked){document.querySelectorAll('.check-pill').forEach(el=>{if(checked)el.classList.add('checked');else el.classList.remove('checked')});renderWeightsPanel();updateFormSummary()}
-function updateFormSummary(){const amt=parseFloat(document.getElementById('f_amount').value)||0;const parts=getSelParts();const w=getCurrentWeights();const totalW=parts.reduce((s,n)=>s+(w[n]||1),0);const s=document.getElementById('formSummary');if(amt>0&&parts.length>0){const per=totalW>0?amt/totalW:0;s.innerHTML=`人均 <strong>${fmt(per)}</strong>（${parts.length} 人）`}else if(amt>0){s.innerHTML=`已填 <strong>${fmt(amt)}</strong>，请勾选`}else{s.innerHTML=''}}
+function updateFormSummary(){const amt=parseAmount(document.getElementById('f_amount').value)||0;const parts=getSelParts();const w=getCurrentWeights();const totalW=parts.reduce((s,n)=>s+(w[n]||1),0);const s=document.getElementById('formSummary');if(amt>0&&parts.length>0){const per=totalW>0?amt/totalW:0;s.innerHTML=`人均 <strong>${fmt(per)}</strong>（${parts.length} 人）`}else if(amt>0){s.innerHTML=`已填 <strong>${fmt(amt)}</strong>，请勾选`}else{s.innerHTML=''}}
 
 // ============================================================
 // Weights
@@ -649,7 +660,7 @@ async function submitTransfer(){
         to=document.getElementById('t_to').value,
         date=document.getElementById('t_date').value,
         desc=document.getElementById('t_desc').value.trim();
-  let amount=parseFloat(document.getElementById('t_amount').value);
+  let amount=parseAmount(document.getElementById('t_amount').value);
   if(!from||!to||!amount||!date){showToast('请填写完整');return}
   if(from===to){showToast('转出和转入不能是同一人');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
@@ -700,7 +711,7 @@ function removeEditImage(idx){_editImages.splice(idx,1);renderEditImagePreviews(
 async function saveEditExpense(){
   const id=document.getElementById('editModal')._editId;const e=state.expenses.find(x=>x.id===id);if(!e)return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){saveEditExpense()},e);return}
-  const date=document.getElementById('e_date').value,cat=_superOK?document.getElementById('e_cat').value:(e.category==='转账'?'转账':autoCategorize(document.getElementById('e_desc').value.trim())),desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
+  const date=document.getElementById('e_date').value,cat=_superOK?document.getElementById('e_cat').value:(e.category==='转账'?'转账':autoCategorize(document.getElementById('e_desc').value.trim())),desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,parts=getEditSelParts();let amount=parseAmount(document.getElementById('e_amount').value);
   const weights={};document.querySelectorAll('[data-ew-name]').forEach(el=>{const n=el.dataset.ewName,v=parseFloat(el.value)||1;if(v!==1)weights[n]=v});
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
@@ -716,7 +727,7 @@ async function saveEditExpense(){
 // ============================================================
 async function submitExpense(){
   if(!ensureWhoami(false))return
-  const date=document.getElementById('f_date').value,cat=_superOK?document.getElementById('f_cat').value:autoCategorize(document.getElementById('f_desc').value.trim()),desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();let amount=parseFloat(document.getElementById('f_amount').value);
+  const date=document.getElementById('f_date').value,cat=_superOK?document.getElementById('f_cat').value:autoCategorize(document.getElementById('f_desc').value.trim()),desc=document.getElementById('f_desc').value.trim(),payer=document.getElementById('f_payer').value,parts=getSelParts(),weights=getCurrentWeights(),images=getCurrentImages();let amount=parseAmount(document.getElementById('f_amount').value);
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
   if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
@@ -792,8 +803,11 @@ function renderExpenseList(){
         const partsArr=e.participants||[],w=e.weights||{};
         const tw=partsArr.length>0?partsArr.reduce((s,n)=>s+(w[n]||1),0):1;
         let partsLines, avgTag='';
-        if(partsArr.length===0){
-          partsLines='<span style="font-size:11px;color:var(--ink-soft)">全员分摊</span>';
+        const allMembers=partsArr.length>0&&partsArr.length===state.members.length&&state.members.every(m=>partsArr.includes(m.name));
+        if(partsArr.length===0||allMembers){
+          const per=tw>0?r2(e.amount/tw):0;
+          partsLines='<span class="all-member-badge">全员分摊</span>';
+          avgTag=`<span style="font-size:10px;color:var(--ink-soft);margin-left:2px">人均 ${fmt(per)}</span>`;
         }else{
           const shares=partsArr.map(n=>r2(e.amount*(w[n]||1)/tw));
           const allSame=shares.every(v=>v===shares[0]);

@@ -64,6 +64,7 @@
   .status-bar button{background:#fff;border:1px solid var(--line-strong);color:var(--ink);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;font-family:inherit}
   .status-bar button:hover{background:var(--bg);border-color:var(--brand);color:var(--brand)}
   .settle-nav-btn{background:var(--gold-soft)!important;color:var(--gold)!important;border-color:var(--gold)!important;font-weight:600!important}
+  .transfer-nav-btn{background:var(--good-soft)!important;color:var(--good)!important;border-color:var(--good)!important;font-weight:600!important}
   .container{max-width:920px;margin:0 auto;padding:14px 16px 60px}
   header{margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
   header h1{font-size:20px;margin:0 0 2px;color:var(--brand);font-weight:700}
@@ -140,6 +141,12 @@
   .ec-recorder{font-size:10px;color:var(--ink-soft);margin-top:1px}
   .img-indicator{display:inline-block;background:var(--brand-soft);color:var(--brand);padding:2px 7px;border-radius:4px;font-size:11px;cursor:pointer;vertical-align:middle;margin-left:4px}
   .editing.exp-card{background:var(--gold-soft);border-color:#e5c76b;box-shadow:0 0 0 2px rgba(191,143,0,.12)}
+  .exp-card.transfer{border-left:3px solid var(--good);background:#f8fdf5}
+  .exp-card.transfer:hover{box-shadow:0 4px 16px rgba(84,130,53,.12)}
+  .exp-card.transfer .ec-amount{color:var(--good)}
+  .exp-card.transfer .ec-cat{background:var(--good-soft);color:var(--good)}
+  .ec-transfer-row{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+  .ec-transfer-row .arrow{color:var(--good);font-size:16px}
   .parts-display{font-size:11px;color:var(--ink-soft)}
   td.actions{text-align:right;white-space:nowrap}
   td.actions button{background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:12px;padding:3px 5px;font-family:inherit}
@@ -186,6 +193,7 @@
   .modal-body{padding:16px 18px;font-size:13px;flex:1;overflow-y:auto}
   .modal-body label{display:block;font-size:11px;color:var(--ink-soft);font-weight:600;margin-top:10px;margin-bottom:3px}
   .modal-body input{width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:6px;font-size:14px;font-family:inherit}
+  .modal-body select{width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:6px;font-size:14px;font-family:inherit;background:#fff;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
   .modal-body input:focus{outline:2px solid var(--brand);outline-offset:-1px}
   .modal-footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
   .modal-help{background:#f9fafb;padding:10px;border-radius:6px;font-size:12px;color:var(--ink-soft);margin-top:10px}
@@ -266,6 +274,7 @@
     <button onclick="openMembersModal()">👥 成员</button>
     <button id="catNavBtn" style="display:none" onclick="openCategoriesModal()">🏷 类目</button>
     <button onclick="openSettingsModal()">⚙</button>
+    <button class="transfer-nav-btn" onclick="openTransferModal()">💸 转账</button>
     <button class="settle-nav-btn" onclick="openSettlementModal()">💰 结算</button>
     <button onclick="openShareModal()" id="shareBtn" style="display:none">📋 分享</button>
   </div>
@@ -322,6 +331,10 @@
 <!-- ===== Share modal ===== -->
 <div class="modal-mask" id="shareModal"><div class="modal"><div class="modal-header"><h2>分享给朋友</h2><button class="close" onclick="closeShareModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">朋友点开看到同一份数据，实时同步。</p><label>共享链接</label><input type="text" id="shareUrl" readonly onclick="this.select()"><div class="modal-help">不要发到公共场合。</div></div><div class="modal-footer"><button class="primary" onclick="copyShareLink()">📋 复制链接</button></div></div></div>
 
+
+<!-- ===== Transfer modal ===== -->
+<div class="modal-mask" id="transferModal"><div class="modal"><div class="modal-header"><h2>💸 记一笔转账</h2><button class="close" onclick="closeTransferModal()">×</button></div><div class="modal-body"><p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px">记录 A 直接付给 B 的金额，最终结算时自动扣减。</p><label>谁转出</label><select id="t_from"></select><label>转给谁</label><select id="t_to"></select><label>金额（¥）</label><input type="number" id="t_amount" step="0.01" min="0" inputmode="decimal" placeholder="0.00"><label>日期</label><input type="date" id="t_date"><label>说明（可选）</label><input type="text" id="t_desc" placeholder="例如：微信转给小王500"></div><div class="modal-footer"><button class="primary" onclick="submitTransfer()">确认转账</button><button class="ghost" onclick="closeTransferModal()">取消</button></div></div></div>
+
 <!-- ===== Settlement modal ===== -->
 <div class="modal-mask" id="settlementModal"><div class="modal wide"><div class="modal-header"><h2>💰 最优结算方案</h2><button class="close" onclick="closeSettlementModal()">×</button></div><div class="modal-body" id="settlementBody"></div><div class="modal-footer" style="display:flex;justify-content:flex-end;align-items:center;gap:8px"><button class="primary" onclick="copySettlement()">📋 复制清单发群</button></div></div></div>
 
@@ -354,7 +367,7 @@ const HARDCODED = {
 };
 const LS_KEYS={url:'supabase_url',key:'supabase_key',trip:'supabase_trip'};
 const LS_WHOAMI='whoami',LS_WHOAMI_TS='whoami_ts',LS_CATS='custom_categories',SUPER_PWD='1234',MAX_WHOAMI_AGE=30*24*60*60*1000;
-const APP_VERSION='V0.19';
+const APP_VERSION='V0.20';
 const VERSION_LOG=[
   {ver:'V0.1',date:'2026-07-07',items:'初始版本：多人录入、实时同步、Supabase后端、权重分摊、拍照凭证、结算方案'},
   {ver:'V0.2',date:'2026-07-07',items:'修复金额numeric overflow；SDK CDN fallback；隐藏密码提示；分类分析改为合计金额浮窗；个人汇总移入成员弹窗；成员删除需管理员密码'},
@@ -375,6 +388,7 @@ const VERSION_LOG=[
   {ver:'V0.17',date:'2026-07-08',items:'优化说明placeholder示例；顶部"类目"导航按钮仅管理员可见'},
   {ver:'V0.18',date:'2026-07-08',items:'已录支出重构为卡片式布局：说明+金额突出显示，类目日期收拢副行，分摊人金额紧凑排列，底部操作栏独立'},
   {ver:'V0.19',date:'2026-07-08',items:'大幅扩充自动分类关键词库（5类150+词）；卡片视觉优化（hover微浮、阴影加深、间距微调）；分摊金额均等时简化为"人均 ¥X"显示'},
+  {ver:'V0.20',date:'2026-07-13',items:'新增中间转账功能（💸按钮）：A直接付B若干金额，余额自动扣减；转账卡片绿色区分；合计分开显示支出与转账；分类统计排除转账'},
 ];
 let sb=null,mode='local',TRIP_ID=null,_superOK=false,_adminDelete=false,_pendingWhoami=false;
 let state={members:[],expenses:[]};
@@ -611,6 +625,45 @@ let _uploadTarget='f';
 function openUploadPicker(target){document.getElementById(target==='f'?'albumInput':'e_albumInput').click()}
 
 // ============================================================
+// Transfer (intermediate settlement)
+// ============================================================
+function openTransferModal(){
+  if(!ensureWhoami(false))return;
+  const members=state.members;
+  if(members.length<2){showToast('至少需要2个成员才能转账');return}
+  const fromSel=document.getElementById('t_from'),toSel=document.getElementById('t_to');
+  const opts=members.map(m=>'<option value="'+esc(m.name)+'">'+esc(m.name)+'</option>').join('');
+  fromSel.innerHTML=opts;toSel.innerHTML=opts;
+  const who=getWhoami();
+  if(who&&members.some(m=>m.name===who))fromSel.value=who;
+  toSel.value=members.find(m=>m.name!==fromSel.value)?.name||'';
+  document.getElementById('t_amount').value='';
+  document.getElementById('t_date').value=todayStr();
+  document.getElementById('t_desc').value='';
+  document.getElementById('transferModal').classList.add('open');
+}
+function closeTransferModal(){document.getElementById('transferModal').classList.remove('open')}
+async function submitTransfer(){
+  if(!ensureWhoami(false))return;
+  const from=document.getElementById('t_from').value,
+        to=document.getElementById('t_to').value,
+        date=document.getElementById('t_date').value,
+        desc=document.getElementById('t_desc').value.trim();
+  let amount=parseFloat(document.getElementById('t_amount').value);
+  if(!from||!to||!amount||!date){showToast('请填写完整');return}
+  if(from===to){showToast('转出和转入不能是同一人');return}
+  if(isNaN(amount)||amount<=0){showToast('金额无效');return}
+  if(amount>99999999.99){showToast('金额不能超过 1 亿');return}
+  amount=Math.round(amount*100)/100;
+  const payload={date,category:'转账',desc:desc||(from+' → '+to),payer:from,amount,participants:[to],weights:{},images:[],created_by:getWhoami()};
+  if(mode==='remote'&&sb){
+    try{var data=await addExpenseRemote(payload);state.expenses.push({id:data.id,...payload})}
+    catch(e){var em=e.message||'';showToast('保存失败:'+em);return}
+  }else{state.expenses.push({id:uid(),...payload});saveLocal()}
+  closeTransferModal();renderAll();showToast('已记录转账');
+}
+
+// ============================================================
 // Edit modal (separate)
 // ============================================================
 function openEditModal(id){document.getElementById('e_weightsPanel').classList.remove('show');document.getElementById('e_weightsToggle').classList.remove('open');
@@ -621,7 +674,7 @@ function openEditModal(id){document.getElementById('e_weightsPanel').classList.r
   document.getElementById('editModal')._editId=id;
   document.getElementById('e_date').value=e.date;
   // Categories
-  const cats=getCategories();const catSel=document.getElementById('e_cat');catSel.innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");catSel.value=e.category;
+  const cats=getCategories();if(e.category==='转账'&&!cats.includes('转账'))cats.push('转账');const catSel=document.getElementById('e_cat');catSel.innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");catSel.value=e.category;
   // Payer
   const payerSel=document.getElementById('e_payer');payerSel.innerHTML=state.members.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join("");payerSel.value=e.payer;
   document.getElementById('e_amount').value=e.amount;
@@ -647,7 +700,7 @@ function removeEditImage(idx){_editImages.splice(idx,1);renderEditImagePreviews(
 async function saveEditExpense(){
   const id=document.getElementById('editModal')._editId;const e=state.expenses.find(x=>x.id===id);if(!e)return;
   if(!canEditOrDelete(e)){promptSuperPassword(function(){saveEditExpense()},e);return}
-  const date=document.getElementById('e_date').value,cat=_superOK?document.getElementById('e_cat').value:autoCategorize(document.getElementById('e_desc').value.trim()),desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
+  const date=document.getElementById('e_date').value,cat=_superOK?document.getElementById('e_cat').value:(e.category==='转账'?'转账':autoCategorize(document.getElementById('e_desc').value.trim())),desc=document.getElementById('e_desc').value.trim(),payer=document.getElementById('e_payer').value,parts=getEditSelParts();let amount=parseFloat(document.getElementById('e_amount').value);
   const weights={};document.querySelectorAll('[data-ew-name]').forEach(el=>{const n=el.dataset.ewName,v=parseFloat(el.value)||1;if(v!==1)weights[n]=v});
   if(!date||!desc||!payer||!amount||parts.length===0){showToast('请填写完整');return}
   if(isNaN(amount)||amount<=0){showToast('金额无效');return}
@@ -707,55 +760,87 @@ function renderExpenseList(){
   else{
     const sorted=[...state.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.id||'').localeCompare(a.id||''));
     sorted.forEach(e=>{
-      const partsArr=e.participants||[],w=e.weights||{};
-      const tw=partsArr.length>0?partsArr.reduce((s,n)=>s+(w[n]||1),0):1;
-      // Build per-person display: always show names; hide amounts if all equal
-      let partsLines, avgTag='';
-      if(partsArr.length===0){
-        partsLines='<span style="font-size:11px;color:var(--ink-soft)">全员分摊</span>';
-      }else{
-        const shares=partsArr.map(n=>r2(e.amount*(w[n]||1)/tw));
-        const allSame=shares.every(v=>v===shares[0]);
-        if(allSame){
-          partsLines=partsArr.map(n=>`<span class="name-tag">${esc(n)}</span>`).join('');
-          avgTag=`<span style="font-size:10px;color:var(--ink-soft);margin-left:2px">人均 ${fmt(shares[0])}</span>`;
-        }else{
-          partsLines=partsArr.map((n,i)=>`<span class="name-tag">${esc(n)}</span><span style="font-size:11px;color:var(--ink-soft);margin-left:2px;margin-right:8px">${fmt(shares[i])}</span>`).join('');
-        }
-      }
+      const isTransfer=e.category==='转账';
       const hasImg=(e.images||[]).length>0;
       const imgTag=hasImg?`<span class="img-indicator" onclick="openLightbox('${esc(e.images[0])}')">📷${e.images.length}</span>`:'';
       const card=document.createElement('div');card.className='exp-card';
       if(e.id===editingId)card.classList.add('editing');
-      card.innerHTML=`
-        <div class="ec-row1">
-          <div class="ec-info">
-            <div class="ec-desc">${esc(e.desc)}${avgTag}${imgTag}</div>
-            <div class="ec-sub">
-              <span class="ec-cat">${esc(e.category)}</span>
-              <span class="ec-date">${esc(e.date)}</span>
+      if(isTransfer)card.classList.add('transfer');
+
+      if(isTransfer){
+        const toName=(e.participants||[])[0]||'?';
+        card.innerHTML=`
+          <div class="ec-row1">
+            <div class="ec-info">
+              <div class="ec-transfer-row"><span class="name-tag">${esc(e.payer)}</span><span class="arrow">→</span><span class="name-tag">${esc(toName)}</span></div>
+              <div class="ec-sub">
+                <span class="ec-cat">转账</span>
+                <span class="ec-date">${esc(e.date)}</span>
+                ${e.desc&&e.desc!==e.payer+' → '+toName?`<span style="color:var(--ink-soft)">${esc(e.desc)}</span>`:''}
+              </div>
+            </div>
+            <div class="ec-amount-col">
+              <div class="ec-amount">${fmt(e.amount)}</div>
+              ${e.created_by?`<div class="ec-recorder">录：${esc(e.created_by)}</div>`:''}
             </div>
           </div>
-          <div class="ec-amount-col">
-            <div class="ec-amount">${fmt(e.amount)}</div>
-            <div class="ec-payer">付：${esc(e.payer)}</div>
-            ${e.created_by?`<div class="ec-recorder">录：${esc(e.created_by)}</div>`:''}
+          <div class="ec-row-actions">
+            <button onclick="openEditModal('${e.id}')">✎ 编辑</button>
+            <button class="del" onclick="deleteExpense('${e.id}')">✕ 删除</button>
+          </div>`;
+      }else{
+        const partsArr=e.participants||[],w=e.weights||{};
+        const tw=partsArr.length>0?partsArr.reduce((s,n)=>s+(w[n]||1),0):1;
+        let partsLines, avgTag='';
+        if(partsArr.length===0){
+          partsLines='<span style="font-size:11px;color:var(--ink-soft)">全员分摊</span>';
+        }else{
+          const shares=partsArr.map(n=>r2(e.amount*(w[n]||1)/tw));
+          const allSame=shares.every(v=>v===shares[0]);
+          if(allSame){
+            partsLines=partsArr.map(n=>`<span class="name-tag">${esc(n)}</span>`).join('');
+            avgTag=`<span style="font-size:10px;color:var(--ink-soft);margin-left:2px">人均 ${fmt(shares[0])}</span>`;
+          }else{
+            partsLines=partsArr.map((n,i)=>`<span class="name-tag">${esc(n)}</span><span style="font-size:11px;color:var(--ink-soft);margin-left:2px;margin-right:8px">${fmt(shares[i])}</span>`).join('');
+          }
+        }
+        card.innerHTML=`
+          <div class="ec-row1">
+            <div class="ec-info">
+              <div class="ec-desc">${esc(e.desc)}${avgTag}${imgTag}</div>
+              <div class="ec-sub">
+                <span class="ec-cat">${esc(e.category)}</span>
+                <span class="ec-date">${esc(e.date)}</span>
+              </div>
+            </div>
+            <div class="ec-amount-col">
+              <div class="ec-amount">${fmt(e.amount)}</div>
+              <div class="ec-payer">付：${esc(e.payer)}</div>
+              ${e.created_by?`<div class="ec-recorder">录：${esc(e.created_by)}</div>`:''}
+            </div>
           </div>
-        </div>
-        <div class="ec-row3">
-          <span class="label">分摊</span>
-          ${partsLines}
-        </div>
-        ${hasImg?`<div class="ec-imgs">${e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')}</div>`:''}
-        <div class="ec-row-actions">
-          <button onclick="openEditModal('${e.id}')">✎ 编辑</button>
-          <button class="del" onclick="deleteExpense('${e.id}')">✕ 删除</button>
-        </div>`;
+          <div class="ec-row3">
+            <span class="label">分摊</span>
+            ${partsLines}
+          </div>
+          ${hasImg?`<div class="ec-imgs">${e.images.map(uri=>`<div class="thumb" style="background-image:url(${esc(uri)})" onclick="openLightbox('${esc(uri)}')"></div>`).join('')}</div>`:''}
+          <div class="ec-row-actions">
+            <button onclick="openEditModal('${e.id}')">✎ 编辑</button>
+            <button class="del" onclick="deleteExpense('${e.id}')">✕ 删除</button>
+          </div>`;
+      }
       cards.appendChild(card);
     });
   }
+  const nonTransfer=state.expenses.filter(e=>e.category!=='转账');
+  const transferTotal=state.expenses.filter(e=>e.category==='转账').reduce((s,e)=>s+e.amount,0);
   document.getElementById('listBadge').textContent=`${state.expenses.length} 笔`;
-  document.getElementById('listTotal').textContent=`合计 ${fmt(state.expenses.reduce((s,e)=>s+e.amount,0))}`;
+  const totalEl=document.getElementById('listTotal');
+  if(transferTotal>0.005){
+    totalEl.innerHTML=`支出 ${fmt(nonTransfer.reduce((s,e)=>s+e.amount,0))} <span style="color:var(--good);font-size:11px">· 转账 ${fmt(transferTotal)}</span>`;
+  }else{
+    totalEl.textContent=`合计 ${fmt(nonTransfer.reduce((s,e)=>s+e.amount,0))}`;
+  }
 }
 
 // ============================================================
@@ -770,7 +855,7 @@ function openCategoryPopup(e){
   if(popup.style.display==='block'){closeCategoryPopup();return}
   const bars=document.getElementById('catPopupBars');
   const cats=getCategories(),totals={};cats.forEach(c=>totals[c]=0);
-  state.expenses.forEach(ex=>{if(totals[ex.category]!==undefined)totals[ex.category]+=ex.amount});
+  state.expenses.forEach(ex=>{if(ex.category==='转账')return;if(totals[ex.category]!==undefined)totals[ex.category]+=ex.amount});
   const grand=cats.reduce((s,c)=>s+totals[c],0);
   bars.innerHTML='';
   if(grand===0){bars.innerHTML='<div class="hint" style="font-size:12px;padding:8px 0">还没有支出数据</div>'}
@@ -841,7 +926,8 @@ function showVersionLog(){
 // Settlement
 // ============================================================
 function settle(){const bal=computeBalances(),arr=Object.entries(bal).map(([name,b])=>({name,amount:b.net})).filter(b=>Math.abs(b.amount)>0.005);const transfers=[];let safety=100;while(safety-- >0){let maxIdx=-1,minIdx=-1,maxVal=0,minVal=0;for(let i=0;i<arr.length;i++){if(arr[i].amount>0.005&&arr[i].amount>maxVal){maxVal=arr[i].amount;maxIdx=i}if(arr[i].amount<-0.005&&arr[i].amount<minVal){minVal=arr[i].amount;minIdx=i}}if(maxIdx===-1||minIdx===-1)break;const t=Math.min(Math.abs(maxVal),Math.abs(minVal));transfers.push({from:arr[minIdx].name,to:arr[maxIdx].name,amount:r2(t)});arr[maxIdx].amount=r2(arr[maxIdx].amount-t);arr[minIdx].amount=r2(arr[minIdx].amount+t)}return transfers}
-function openSettlementModal(){const body=document.getElementById('settlementBody');if(state.expenses.length===0||state.members.length===0){body.innerHTML='<div class="result-empty">还没有数据。</div>'}else{const transfers=settle(),total=transfers.reduce((s,t)=>s+t.amount,0),bal=computeBalances(),npeople=Object.values(bal).filter(b=>Math.abs(b.net)>0.005).length;let html=`<div class="result-summary"><div class="stat"><div class="label">转账笔数</div><div class="value">${transfers.length} 笔</div></div><div class="stat"><div class="label">流转总额</div><div class="value">${fmt(total)}</div></div><div class="stat"><div class="label">参与人数</div><div class="value">${npeople} 人</div></div></div><div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">算法：每次取最大应收方配对最大应付方，最多n−1笔</div>`;if(transfers.length===0){html+='<div class="result-empty">全部已结清</div>'}else{transfers.forEach((t,i)=>{html+=`<div class="settle-transfer-item"><span class="idx">${i+1}</span><span class="who"><span class="name-pill from">${esc(t.from)}</span><span class="arrow">→</span><span class="name-pill to">${esc(t.to)}</span></span><span class="amount">${fmt(t.amount)}</span></div>`})}body.innerHTML=html}document.getElementById('settlementModal').classList.add('open')}
+function openSettlementModal(){const body=document.getElementById('settlementBody');if(state.expenses.length===0||state.members.length===0){body.innerHTML='<div class="result-empty">还没有数据。</div>'}else{const transfers=settle(),total=transfers.reduce((s,t)=>s+t.amount,0),bal=computeBalances(),npeople=Object.values(bal).filter(b=>Math.abs(b.net)>0.005).length;const transferCount=state.expenses.filter(e=>e.category==='转账').length;
+let html=`<div class="result-summary"><div class="stat"><div class="label">转账笔数</div><div class="value">${transfers.length} 笔</div></div><div class="stat"><div class="label">流转总额</div><div class="value">${fmt(total)}</div></div><div class="stat"><div class="label">参与人数</div><div class="value">${npeople} 人</div></div></div><div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">算法：每次取最大应收方配对最大应付方，最多n−1笔${transferCount>0?'· 已含'+transferCount+'笔中间转账，余额已自动扣减':''}</div>`;if(transfers.length===0){html+='<div class="result-empty">全部已结清</div>'}else{transfers.forEach((t,i)=>{html+=`<div class="settle-transfer-item"><span class="idx">${i+1}</span><span class="who"><span class="name-pill from">${esc(t.from)}</span><span class="arrow">→</span><span class="name-pill to">${esc(t.to)}</span></span><span class="amount">${fmt(t.amount)}</span></div>`})}body.innerHTML=html}document.getElementById('settlementModal').classList.add('open')}
 function closeSettlementModal(){document.getElementById('settlementModal').classList.remove('open')}
 
 // ============================================================
